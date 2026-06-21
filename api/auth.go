@@ -1,16 +1,30 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// Auth groups the auth handlers and middleware with their dependencies.
+type Auth struct {
+	pool   *pgxpool.Pool
+	secret []byte
+}
+
+type ctxKey string
+
+const userIDKey ctxKey = "userID"
 
 const accessTokenTTL = 15 * time.Minute
 
@@ -72,4 +86,28 @@ func newRefreshToken() (string, error) {
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
+}
+
+// Middleware authenticates the access token and stores the user id in context.
+func (a *Auth) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if !ok || raw == "" {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "missing bearer token"})
+			return
+		}
+		userID, err := parseAccessToken(a.secret, raw)
+		if err != nil {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+			return
+		}
+		ctx := context.WithValue(r.Context(), userIDKey, userID)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// userIDFromContext reads the authenticated user id set by Middleware.
+func userIDFromContext(ctx context.Context) (int64, bool) {
+	id, ok := ctx.Value(userIDKey).(int64)
+	return id, ok
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -93,5 +95,60 @@ func TestRefreshTokensUnique(t *testing.T) {
 	b, _ := newRefreshToken()
 	if a == b {
 		t.Fatal("two generated tokens must differ")
+	}
+}
+
+func mustMint(secret []byte, uid int64, at time.Time) string {
+	s, _ := mintAccessToken(secret, uid, at)
+	return s
+}
+
+func TestMiddlewareValidToken(t *testing.T) {
+	secret := []byte("test-secret-key-at-least-32-bytes!!")
+	a := &Auth{secret: secret} // nil pool: middleware does no DB work
+	tok := mustMint(secret, 7, time.Now())
+
+	var gotID int64
+	var gotOK bool
+	protected := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotID, gotOK = userIDFromContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
+	req.Header.Set("Authorization", "Bearer "+tok)
+	rec := httptest.NewRecorder()
+	a.Middleware(protected).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+	if !gotOK || gotID != 7 {
+		t.Fatalf("want userID 7 in context, got %d (ok=%v)", gotID, gotOK)
+	}
+}
+
+func TestMiddlewareRejects(t *testing.T) {
+	secret := []byte("test-secret-key-at-least-32-bytes!!")
+	a := &Auth{secret: secret}
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+
+	cases := map[string]string{
+		"missing": "",
+		"garbage": "Bearer not-a-jwt",
+		"expired": "Bearer " + mustMint(secret, 1, time.Now().Add(-time.Hour)),
+	}
+	for name, header := range cases {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/me", nil)
+			if header != "" {
+				req.Header.Set("Authorization", header)
+			}
+			rec := httptest.NewRecorder()
+			a.Middleware(next).ServeHTTP(rec, req)
+			if rec.Code != http.StatusUnauthorized {
+				t.Fatalf("%s: want 401, got %d", name, rec.Code)
+			}
+		})
 	}
 }
