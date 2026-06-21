@@ -28,6 +28,8 @@ func main() {
 	check := func(ctx context.Context) error { return Healthy(ctx, pool) }
 
 	auth := &Auth{pool: pool, secret: []byte(cfg.JWTSecret)}
+	chat := &Chat{pool: pool}
+	protect := func(h http.HandlerFunc) http.Handler { return auth.Middleware(http.HandlerFunc(h)) }
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler(check))
@@ -36,6 +38,8 @@ func main() {
 	mux.HandleFunc("POST /api/refresh", auth.Refresh)
 	mux.HandleFunc("POST /api/logout", auth.Logout)
 	mux.Handle("GET /api/me", auth.Middleware(http.HandlerFunc(auth.Me)))
+	mux.Handle("GET /api/conversations", protect(chat.List))
+	mux.Handle("POST /api/conversations", protect(chat.Create))
 
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 
