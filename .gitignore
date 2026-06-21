@@ -6,3 +6,6 @@
 
 # Go build artifacts
 /api/api
+
+# local planning/design notes (kept out of the example repo)
+docs/
