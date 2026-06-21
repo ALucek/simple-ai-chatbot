@@ -71,3 +71,27 @@ func TestAccessTokenAlgNoneRejected(t *testing.T) {
 		t.Fatal("alg=none token must be rejected")
 	}
 }
+
+func TestRefreshTokenHashing(t *testing.T) {
+	raw, err := newRefreshToken()
+	if err != nil {
+		t.Fatalf("newRefreshToken: %v", err)
+	}
+	if len(raw) != 64 {
+		t.Fatalf("want 64 hex chars, got %d", len(raw))
+	}
+	if hashToken(raw) != hashToken(raw) {
+		t.Fatal("hash must be deterministic")
+	}
+	if hashToken(raw) == raw {
+		t.Fatal("hash must not equal the raw token")
+	}
+}
+
+func TestRefreshTokensUnique(t *testing.T) {
+	a, _ := newRefreshToken()
+	b, _ := newRefreshToken()
+	if a == b {
+		t.Fatal("two generated tokens must differ")
+	}
+}
