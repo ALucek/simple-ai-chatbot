@@ -2,7 +2,7 @@ include .env
 export
 DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: db-up db-down db-psql api-run api-test web-install web-run web-build web-lint web-test test health migrate-up migrate-down migrate-status migrate-create api-fmt api-lint web-fmt web-fmt-check
+.PHONY: db-up db-down db-psql api-run api-test web-install web-run web-build web-lint web-test test health migrate-up migrate-down migrate-status migrate-create api-fmt api-fmt-check api-lint web-fmt web-fmt-check fmt lint hooks
 
 db-up:
 	docker compose up -d
@@ -25,8 +25,10 @@ api-test:
 api-fmt:
 	cd api && gofmt -w .
 
-api-lint:
+api-fmt-check:
 	@cd api && test -z "$$(gofmt -l .)" || { echo "gofmt needed — run 'make api-fmt'"; gofmt -l .; exit 1; }
+
+api-lint:
 	cd api && go vet ./...
 
 migrate-up:
@@ -61,5 +63,13 @@ web-fmt:
 
 web-fmt-check:
 	cd web && pnpm format:check
+
+fmt: api-fmt web-fmt
+
+lint: api-fmt-check api-lint web-fmt-check web-lint
+
+hooks:
+	pre-commit install
+	pre-commit install --hook-type pre-push
 
 test: api-test web-test

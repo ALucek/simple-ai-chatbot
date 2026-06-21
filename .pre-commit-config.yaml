@@ -1,0 +1,43 @@
+# Enable per clone with `make hooks` (runs `pre-commit install`).
+# Requires the pre-commit tool: `brew install pre-commit` (or pipx/pip).
+repos:
+  - repo: local
+    hooks:
+      - id: api-fmt-check
+        name: gofmt check
+        entry: make api-fmt-check
+        language: system
+        files: ^api/.*\.go$
+        pass_filenames: false
+      - id: api-lint
+        name: go vet
+        entry: make api-lint
+        language: system
+        files: ^api/.*\.go$
+        pass_filenames: false
+      - id: web-fmt-check
+        name: Prettier check
+        entry: make web-fmt-check
+        language: system
+        files: ^web/
+        pass_filenames: false
+      - id: web-lint
+        name: ESLint
+        entry: make web-lint
+        language: system
+        files: ^web/
+        pass_filenames: false
+      - id: api-test
+        name: Go tests
+        entry: make api-test
+        language: system
+        files: ^api/.*\.go$
+        pass_filenames: false
+        stages: [pre-push]
+      - id: web-test
+        name: Vitest
+        entry: make web-test
+        language: system
+        files: ^web/
+        pass_filenames: false
+        stages: [pre-push]
