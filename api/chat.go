@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,7 +13,9 @@ import (
 
 // Chat holds the conversation/message handlers and their dependencies.
 type Chat struct {
-	pool *pgxpool.Pool
+	pool         *pgxpool.Pool
+	llm          *openRouterClient
+	systemPrompt string
 }
 
 type conversation struct {
@@ -165,4 +169,105 @@ func (c *Chat) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Send streams the assistant's reply to a new user message over SSE.
+func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
+	userID, _ := userIDFromContext(r.Context())
+	id, err := conversationID(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid conversation id"})
+		return
+	}
+
+	// Ownership pre-check (same as Messages): 404 if not the caller's.
+	var owned bool
+	if err := c.pool.QueryRow(r.Context(),
+		`select exists(select 1 from conversations where id = $1 and user_id = $2)`,
+		id, userID).Scan(&owned); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "lookup failed"})
+		return
+	}
+	if !owned {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "conversation not found"})
+		return
+	}
+
+	var body struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Content == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "content required"})
+		return
+	}
+
+	// Persist the user message first, so it survives a failed model call.
+	if _, err := c.pool.Exec(r.Context(),
+		`insert into messages (conversation_id, role, content) values ($1, 'user', $2)`,
+		id, body.Content); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not save message"})
+		return
+	}
+
+	// Build the request: system prompt + full history (includes the new message).
+	msgs := []llmMessage{{Role: "system", Content: c.systemPrompt}}
+	rows, err := c.pool.Query(r.Context(),
+		`select role, content from messages where conversation_id = $1 order by id`, id)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not load history"})
+		return
+	}
+	for rows.Next() {
+		var m llmMessage
+		if err := rows.Scan(&m.Role, &m.Content); err != nil {
+			rows.Close()
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "scan failed"})
+			return
+		}
+		msgs = append(msgs, m)
+	}
+	rows.Close() // free the pooled connection before the (long) stream
+
+	// Commit to the stream: from here, failures are reported as SSE events.
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "streaming unsupported"})
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(http.StatusOK)
+
+	var reply strings.Builder
+	err = c.llm.stream(r.Context(), msgs, func(text string) {
+		reply.WriteString(text)
+		writeSSE(w, "delta", map[string]string{"text": text})
+		flusher.Flush()
+	})
+	if err != nil {
+		writeSSE(w, "error", map[string]string{"error": "stream failed"})
+		flusher.Flush()
+		return
+	}
+
+	// Persist the complete reply and bump activity time.
+	var msgID int64
+	if err := c.pool.QueryRow(r.Context(),
+		`insert into messages (conversation_id, role, content) values ($1, 'assistant', $2) returning id`,
+		id, reply.String()).Scan(&msgID); err != nil {
+		writeSSE(w, "error", map[string]string{"error": "could not save reply"})
+		flusher.Flush()
+		return
+	}
+	_, _ = c.pool.Exec(r.Context(),
+		`update conversations set updated_at = now() where id = $1`, id)
+
+	writeSSE(w, "done", map[string]int64{"message_id": msgID})
+	flusher.Flush()
+}
+
+// writeSSE writes one SSE frame; data is JSON-encoded so every frame is a JSON object.
+func writeSSE(w http.ResponseWriter, event string, data any) {
+	payload, _ := json.Marshal(data)
+	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, payload)
 }

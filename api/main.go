@@ -28,7 +28,8 @@ func main() {
 	check := func(ctx context.Context) error { return Healthy(ctx, pool) }
 
 	auth := &Auth{pool: pool, secret: []byte(cfg.JWTSecret)}
-	chat := &Chat{pool: pool}
+	llm := &openRouterClient{key: cfg.OpenRouterKey, model: cfg.Model, http: &http.Client{}}
+	chat := &Chat{pool: pool, llm: llm, systemPrompt: cfg.SystemPrompt}
 	protect := func(h http.HandlerFunc) http.Handler { return auth.Middleware(http.HandlerFunc(h)) }
 
 	mux := http.NewServeMux()
@@ -43,6 +44,7 @@ func main() {
 	mux.Handle("GET /api/conversations/{id}/messages", protect(chat.Messages))
 	mux.Handle("PATCH /api/conversations/{id}", protect(chat.Rename))
 	mux.Handle("DELETE /api/conversations/{id}", protect(chat.Delete))
+	mux.Handle("POST /api/conversations/{id}/messages", protect(chat.Send))
 
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 
