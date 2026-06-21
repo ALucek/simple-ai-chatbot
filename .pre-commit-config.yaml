@@ -15,9 +15,9 @@ repos:
         language: system
         files: ^api/.*\.go$
         pass_filenames: false
-      - id: web-fmt-check
-        name: Prettier check
-        entry: make web-fmt-check
+      - id: web-fmt
+        name: Prettier write
+        entry: make web-fmt
         language: system
         files: ^web/
         pass_filenames: false
