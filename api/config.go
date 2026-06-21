@@ -13,6 +13,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	Port       string
+	JWTSecret  string
 }
 
 // LoadConfig reads the required settings from the environment.
@@ -24,6 +25,7 @@ func LoadConfig() (Config, error) {
 		DBPassword: os.Getenv("DB_PASSWORD"),
 		DBName:     os.Getenv("DB_NAME"),
 		Port:       os.Getenv("PORT"),
+		JWTSecret:  os.Getenv("JWT_SECRET"),
 	}
 
 	required := []struct{ name, value string }{
@@ -33,6 +35,7 @@ func LoadConfig() (Config, error) {
 		{"DB_PASSWORD", cfg.DBPassword},
 		{"DB_NAME", cfg.DBName},
 		{"PORT", cfg.Port},
+		{"JWT_SECRET", cfg.JWTSecret},
 	}
 	for _, r := range required {
 		if r.value == "" {

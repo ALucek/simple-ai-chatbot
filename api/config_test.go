@@ -9,6 +9,18 @@ func setAllEnv(t *testing.T) {
 	t.Setenv("DB_PASSWORD", "devpassword")
 	t.Setenv("DB_NAME", "chat")
 	t.Setenv("PORT", "8080")
+	t.Setenv("JWT_SECRET", "test-secret-at-least-32-bytes-long-xx")
+}
+
+func TestLoadConfig_HasJWTSecret(t *testing.T) {
+	setAllEnv(t)
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.JWTSecret != "test-secret-at-least-32-bytes-long-xx" {
+		t.Fatalf("JWTSecret not populated: %q", cfg.JWTSecret)
+	}
 }
 
 func TestLoadConfig_AllPresent(t *testing.T) {
