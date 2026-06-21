@@ -10,6 +10,7 @@ func setAllEnv(t *testing.T) {
 	t.Setenv("DB_NAME", "chat")
 	t.Setenv("PORT", "8080")
 	t.Setenv("JWT_SECRET", "test-secret-at-least-32-bytes-long-xx")
+	t.Setenv("OPENROUTER_API_KEY", "test-openrouter-key")
 }
 
 func TestLoadConfig_HasJWTSecret(t *testing.T) {
