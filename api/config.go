@@ -7,25 +7,31 @@ import (
 
 // Config holds everything the app needs to run, read once from the environment.
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	Port       string
-	JWTSecret  string
+	DBHost        string
+	DBPort        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	Port          string
+	JWTSecret     string
+	OpenRouterKey string
+	Model         string
+	SystemPrompt  string
 }
 
 // LoadConfig reads the required settings from the environment.
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		DBHost:     os.Getenv("DB_HOST"),
-		DBPort:     os.Getenv("DB_PORT"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
-		Port:       os.Getenv("PORT"),
-		JWTSecret:  os.Getenv("JWT_SECRET"),
+		DBHost:        os.Getenv("DB_HOST"),
+		DBPort:        os.Getenv("DB_PORT"),
+		DBUser:        os.Getenv("DB_USER"),
+		DBPassword:    os.Getenv("DB_PASSWORD"),
+		DBName:        os.Getenv("DB_NAME"),
+		Port:          os.Getenv("PORT"),
+		JWTSecret:     os.Getenv("JWT_SECRET"),
+		OpenRouterKey: os.Getenv("OPENROUTER_API_KEY"),
+		Model:         getenvDefault("OPENROUTER_MODEL", "openrouter/free"),
+		SystemPrompt:  getenvDefault("SYSTEM_PROMPT", "You are a helpful assistant."),
 	}
 
 	required := []struct{ name, value string }{
@@ -36,6 +42,7 @@ func LoadConfig() (Config, error) {
 		{"DB_NAME", cfg.DBName},
 		{"PORT", cfg.Port},
 		{"JWT_SECRET", cfg.JWTSecret},
+		{"OPENROUTER_API_KEY", cfg.OpenRouterKey},
 	}
 	for _, r := range required {
 		if r.value == "" {
@@ -43,4 +50,12 @@ func LoadConfig() (Config, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// getenvDefault returns the env var if set, otherwise def.
+func getenvDefault(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
