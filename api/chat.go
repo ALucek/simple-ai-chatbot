@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
@@ -113,4 +114,55 @@ func (c *Chat) Messages(w http.ResponseWriter, r *http.Request) {
 		msgs = append(msgs, m)
 	}
 	writeJSON(w, http.StatusOK, msgs)
+}
+
+// Rename sets a conversation's title (scoped to the caller). 204 on success.
+func (c *Chat) Rename(w http.ResponseWriter, r *http.Request) {
+	userID, _ := userIDFromContext(r.Context())
+	id, err := conversationID(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid conversation id"})
+		return
+	}
+	var body struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Title == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "title required"})
+		return
+	}
+	// No updated_at bump: renaming is not new activity.
+	tag, err := c.pool.Exec(r.Context(),
+		`update conversations set title = $1 where id = $2 and user_id = $3`,
+		body.Title, id, userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "update failed"})
+		return
+	}
+	if tag.RowsAffected() == 0 { // not owned or missing
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "conversation not found"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Delete removes a conversation (scoped to the caller); messages cascade. 204 on success.
+func (c *Chat) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, _ := userIDFromContext(r.Context())
+	id, err := conversationID(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid conversation id"})
+		return
+	}
+	tag, err := c.pool.Exec(r.Context(),
+		`delete from conversations where id = $1 and user_id = $2`, id, userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "delete failed"})
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "conversation not found"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

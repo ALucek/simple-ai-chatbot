@@ -41,6 +41,8 @@ func main() {
 	mux.Handle("GET /api/conversations", protect(chat.List))
 	mux.Handle("POST /api/conversations", protect(chat.Create))
 	mux.Handle("GET /api/conversations/{id}/messages", protect(chat.Messages))
+	mux.Handle("PATCH /api/conversations/{id}", protect(chat.Rename))
+	mux.Handle("DELETE /api/conversations/{id}", protect(chat.Delete))
 
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 
