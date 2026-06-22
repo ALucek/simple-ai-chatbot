@@ -2,7 +2,7 @@
 export
 DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset \
+.PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset docker-build stack-up stack-down\
         api-run api-fmt api-fmt-check api-lint api-typecheck api-test \
         web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test e2e e2e-local \
         fmt lint typecheck test api-check web-check check \
@@ -86,6 +86,18 @@ e2e:
 	cd web && pnpm e2e
 
 e2e-local: db-up migrate-up e2e
+
+# ── Containers / full stack ────────────────────────────────────────────
+
+docker-build:
+	docker compose --profile full build
+
+stack-up:
+	docker compose --profile full up -d --wait
+	$(MAKE) migrate-up
+
+stack-down:
+	docker compose --profile full down
 
 # ── Quality gates (aggregates) ─────────────────────────────────────────
 

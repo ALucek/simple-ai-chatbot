@@ -14,6 +14,37 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+  api:
+    profiles: [full]
+    build: ./api
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      PORT: ${PORT}
+      JWT_SECRET: ${JWT_SECRET}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
+      SYSTEM_PROMPT: ${SYSTEM_PROMPT}
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    profiles: [full]
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
 
 volumes:
   chatdata:
