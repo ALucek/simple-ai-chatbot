@@ -2,16 +2,16 @@
 export
 DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
-.PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create \
+.PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset \
         api-run api-fmt api-fmt-check api-lint api-typecheck api-test \
-        web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test \
+        web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test e2e e2e-local \
         fmt lint typecheck test api-check web-check check \
         hooks health
 
 # ── Database & migrations ──────────────────────────────────────────────
 
 db-up:
-	docker compose up -d
+	docker compose up -d --wait
 
 db-down:
 	docker compose down
@@ -30,6 +30,11 @@ migrate-status:
 
 migrate-create:
 	@cd api && go tool goose -dir migrations create $(name) sql
+
+db-delete:
+	docker compose down -v
+
+db-reset: db-delete db-up migrate-up
 
 # ── API ────────────────────────────────────────────────────────────────
 
@@ -80,6 +85,8 @@ web-test:
 e2e:
 	cd web && pnpm e2e
 
+e2e-local: db-up migrate-up e2e
+
 # ── Quality gates (aggregates) ─────────────────────────────────────────
 
 fmt: api-fmt web-fmt
@@ -95,7 +102,7 @@ api-check: api-fmt-check api-lint api-typecheck api-test
 web-check: web-fmt-check web-lint web-typecheck web-test web-build
 
 # Full local gate: everything that must pass before merge.
-check: api-check web-check
+check: api-check web-check e2e
 
 # ── Dev tooling ────────────────────────────────────────────────────────
 
