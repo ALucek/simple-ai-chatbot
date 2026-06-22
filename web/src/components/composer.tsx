@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 export function Composer({
   onSend,
@@ -26,24 +28,20 @@ export function Composer({
   }
 
   return (
-    <div className="border-t border-gray-200 p-3">
+    <div className="border-border bg-surface border-t p-3">
       <div className="mx-auto flex max-w-2xl items-end gap-2">
-        <textarea
+        <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKeyDown}
           disabled={disabled}
           rows={1}
           placeholder="Send a message…"
-          className="flex-1 resize-none rounded border border-gray-300 p-2 text-sm focus:border-black focus:outline-none disabled:opacity-50"
+          className="flex-1"
         />
-        <button
-          onClick={submit}
-          disabled={disabled}
-          className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-        >
+        <Button onClick={submit} disabled={disabled}>
           Send
-        </button>
+        </Button>
       </div>
     </div>
   );
