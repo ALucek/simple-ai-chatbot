@@ -140,3 +140,43 @@ export async function logout(): Promise<void> {
 export function me(): Promise<User> {
   return request<User>('/api/me');
 }
+
+export interface Conversation {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Message {
+  id: number;
+  role: string;
+  content: string;
+  created_at: string;
+}
+
+export function listConversations(): Promise<Conversation[]> {
+  return request<Conversation[]>('/api/conversations');
+}
+
+export function createConversation(): Promise<Conversation> {
+  return request<Conversation>('/api/conversations', { method: 'POST' });
+}
+
+export async function renameConversation(
+  id: number,
+  title: string,
+): Promise<void> {
+  await request<null>(`/api/conversations/${id}`, {
+    method: 'PATCH',
+    body: { title },
+  });
+}
+
+export async function deleteConversation(id: number): Promise<void> {
+  await request<null>(`/api/conversations/${id}`, { method: 'DELETE' });
+}
+
+export function getMessages(id: number): Promise<Message[]> {
+  return request<Message[]>(`/api/conversations/${id}/messages`);
+}

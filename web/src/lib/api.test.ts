@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { login, me, refreshAccess, clearSession, ApiError } from './api';
+import {
+  login,
+  me,
+  refreshAccess,
+  clearSession,
+  ApiError,
+  listConversations,
+  createConversation,
+  renameConversation,
+  deleteConversation,
+  getMessages,
+} from './api';
 
 // Minimal Response stand-in for a JSON body.
 function jsonResponse(status: number, body: unknown): Response {
@@ -73,5 +84,56 @@ describe('api client', () => {
 
     await expect(me()).rejects.toBeInstanceOf(ApiError);
     expect(localStorage.getItem('refresh_token')).toBeNull();
+  });
+});
+
+describe('conversation endpoints', () => {
+  it('listConversations GETs the list', async () => {
+    const data = [{ id: 1, title: '', created_at: 't', updated_at: 't' }];
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, data));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(listConversations()).resolves.toEqual(data);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://localhost:8080/api/conversations',
+    );
+  });
+
+  it('createConversation POSTs and returns the new conversation', async () => {
+    const convo = { id: 5, title: '', created_at: 't', updated_at: 't' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, convo));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(createConversation()).resolves.toEqual(convo);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('renameConversation PATCHes the title', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(204, null));
+    vi.stubGlobal('fetch', fetchMock);
+    await renameConversation(5, 'New name');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://localhost:8080/api/conversations/5');
+    expect(init).toMatchObject({ method: 'PATCH' });
+    expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+      title: 'New name',
+    });
+  });
+
+  it('deleteConversation DELETEs', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(204, null));
+    vi.stubGlobal('fetch', fetchMock);
+    await deleteConversation(5);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://localhost:8080/api/conversations/5');
+    expect(init).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('getMessages GETs the conversation messages', async () => {
+    const msgs = [{ id: 1, role: 'user', content: 'hi', created_at: 't' }];
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, msgs));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(getMessages(7)).resolves.toEqual(msgs);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://localhost:8080/api/conversations/7/messages',
+    );
   });
 });
