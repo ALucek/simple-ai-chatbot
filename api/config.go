@@ -19,6 +19,7 @@ type Config struct {
 	SystemPrompt      string
 	AllowedOrigin     string
 	OpenRouterBaseURL string
+	DatabaseURL       string
 }
 
 // LoadConfig reads the required settings from the environment.
@@ -36,6 +37,7 @@ func LoadConfig() (Config, error) {
 		SystemPrompt:      getenvDefault("SYSTEM_PROMPT", "You are a helpful assistant."),
 		AllowedOrigin:     getenvDefault("ALLOWED_ORIGIN", "http://localhost:3000"),
 		OpenRouterBaseURL: getenvDefault("OPENROUTER_BASE_URL", openRouterURL),
+		DatabaseURL:       os.Getenv("DATABASE_URL"),
 	}
 
 	required := []struct{ name, value string }{

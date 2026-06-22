@@ -9,13 +9,19 @@ import (
 
 // NewPool opens a connection pool to Postgres using the given config.
 func NewPool(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := pgxpool.New(ctx, dsn(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
 	return pool, nil
+}
+
+func dsn(cfg Config) string {
+	if cfg.DatabaseURL != "" {
+		return cfg.DatabaseURL
+	}
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 }
 
 // Healthy runs a trivial query to confirm the database actually answers.
