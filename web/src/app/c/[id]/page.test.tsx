@@ -20,6 +20,8 @@ describe('ConversationPage', () => {
       loading: false,
       error: null,
       notFound: false,
+      send: vi.fn(),
+      sending: false,
     });
     render(<ConversationPage />);
     expect(screen.getByText('Hi')).toBeInTheDocument();
@@ -32,6 +34,8 @@ describe('ConversationPage', () => {
       loading: false,
       error: null,
       notFound: false,
+      send: vi.fn(),
+      sending: false,
     });
     render(<ConversationPage />);
     expect(screen.getByText('No messages yet')).toBeInTheDocument();
@@ -43,6 +47,8 @@ describe('ConversationPage', () => {
       loading: false,
       error: null,
       notFound: true,
+      send: vi.fn(),
+      sending: false,
     });
     render(<ConversationPage />);
     expect(screen.getByText('Conversation not found')).toBeInTheDocument();

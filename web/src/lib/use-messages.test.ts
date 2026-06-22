@@ -4,16 +4,26 @@ import { useMessages } from './use-messages';
 import * as api from './api';
 import { ApiError, type Message } from './api';
 
+const { patchConversation } = vi.hoisted(() => ({
+  patchConversation: vi.fn(),
+}));
+
 vi.mock('./api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./api')>();
-  return { ...actual, getMessages: vi.fn() };
+  return { ...actual, getMessages: vi.fn(), sendMessage: vi.fn() };
 });
+
+vi.mock('./conversations-context', () => ({
+  useConversationsContext: () => ({ patchConversation }),
+}));
 
 const mA: Message[] = [{ id: 1, role: 'user', content: 'A', created_at: 't' }];
 const mB: Message[] = [{ id: 2, role: 'user', content: 'B', created_at: 't' }];
 
 beforeEach(() => {
   vi.mocked(api.getMessages).mockReset();
+  vi.mocked(api.sendMessage).mockReset();
+  patchConversation.mockReset();
 });
 
 describe('useMessages', () => {
@@ -66,5 +76,67 @@ describe('useMessages', () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.notFound).toBe(true);
+  });
+
+  it('send appends optimistic user + assistant messages and streams deltas', async () => {
+    vi.mocked(api.getMessages).mockResolvedValue([]);
+    vi.mocked(api.sendMessage).mockImplementation(async (_id, _content, h) => {
+      h.onDelta('Hel');
+      h.onDelta('lo');
+      h.onDone(42);
+    });
+    const { result } = renderHook(({ id }) => useMessages(id), {
+      initialProps: { id: 1 },
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.send('hi');
+    });
+    expect(result.current.messages).toEqual([
+      { id: -1, role: 'user', content: 'hi', created_at: '' },
+      {
+        id: 42,
+        role: 'assistant',
+        content: 'Hello',
+        created_at: '',
+        streaming: false,
+      },
+    ]);
+    expect(result.current.sending).toBe(false);
+  });
+
+  it('send forwards a title event to patchConversation', async () => {
+    vi.mocked(api.getMessages).mockResolvedValue([]);
+    vi.mocked(api.sendMessage).mockImplementation(async (_id, _content, h) => {
+      h.onDone(7);
+      h.onTitle('My title');
+    });
+    const { result } = renderHook(({ id }) => useMessages(id), {
+      initialProps: { id: 3 },
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.send('hi');
+    });
+    expect(patchConversation).toHaveBeenCalledWith(3, { title: 'My title' });
+  });
+
+  it('send removes the assistant bubble and sets error on failure', async () => {
+    vi.mocked(api.getMessages).mockResolvedValue([]);
+    vi.mocked(api.sendMessage).mockImplementation(async (_id, _content, h) => {
+      h.onError('stream failed');
+    });
+    const { result } = renderHook(({ id }) => useMessages(id), {
+      initialProps: { id: 1 },
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.send('hi');
+    });
+    expect(result.current.messages).toEqual([
+      { id: -1, role: 'user', content: 'hi', created_at: '' },
+    ]);
+    expect(result.current.error).toBe('stream failed');
+    expect(result.current.sending).toBe(false);
   });
 });
