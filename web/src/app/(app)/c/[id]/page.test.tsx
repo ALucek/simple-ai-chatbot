@@ -53,4 +53,39 @@ describe('ConversationPage', () => {
     render(<ConversationPage />);
     expect(screen.getByText('Conversation not found')).toBeInTheDocument();
   });
+
+  it('renders the composer alongside history', () => {
+    vi.mocked(messagesHook.useMessages).mockReturnValue({
+      messages: [{ id: 1, role: 'user', content: 'Hi', created_at: 't' }],
+      loading: false,
+      error: null,
+      notFound: false,
+      send: vi.fn(),
+      sending: false,
+    });
+    render(<ConversationPage />);
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+  });
+
+  it('shows a caret on a streaming assistant message', () => {
+    vi.mocked(messagesHook.useMessages).mockReturnValue({
+      messages: [
+        {
+          id: -2,
+          role: 'assistant',
+          content: 'Hel',
+          created_at: '',
+          streaming: true,
+        },
+      ],
+      loading: false,
+      error: null,
+      notFound: false,
+      send: vi.fn(),
+      sending: false,
+    });
+    render(<ConversationPage />);
+    expect(screen.getByText(/Hel▍/)).toBeInTheDocument();
+  });
 });

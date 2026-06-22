@@ -1,6 +1,6 @@
-import type { Message } from '@/lib/api';
+import type { ChatMessage } from '@/lib/use-messages';
 
-export function MessageList({ messages }: { messages: Message[] }) {
+export function MessageList({ messages }: { messages: ChatMessage[] }) {
   return (
     <ul className="mx-auto flex max-w-2xl flex-col gap-4 p-6">
       {messages.map((m) => (
@@ -11,7 +11,10 @@ export function MessageList({ messages }: { messages: Message[] }) {
           <span className="block text-xs text-gray-400 uppercase">
             {m.role}
           </span>
-          <span className="whitespace-pre-wrap">{m.content}</span>
+          <span className="whitespace-pre-wrap">
+            {m.content}
+            {m.streaming && '▍'}
+          </span>
         </li>
       ))}
     </ul>

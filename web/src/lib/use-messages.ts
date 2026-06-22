@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type Message, getMessages, sendMessage, ApiError } from './api';
 import { useConversationsContext } from './conversations-context';
 
@@ -34,6 +34,9 @@ export function useMessages(id: number): UseMessages {
   const [state, setState] = useState<State>({ id, ...LOADING });
   const [sending, setSending] = useState(false);
   const { patchConversation } = useConversationsContext();
+  // Decrementing counter for optimistic message ids; keeps each send's user +
+  // assistant bubbles unique so React keys never collide across sends.
+  const tempId = useRef(0);
 
   useEffect(() => {
     let ignore = false;
@@ -65,15 +68,17 @@ export function useMessages(id: number): UseMessages {
   }, [id]);
 
   async function send(content: string): Promise<void> {
+    const userId = --tempId.current;
+    const assistantId = --tempId.current;
     setSending(true);
     setState((s) => ({
       ...s,
       error: null,
       messages: [
         ...s.messages,
-        { id: -1, role: 'user', content, created_at: '' },
+        { id: userId, role: 'user', content, created_at: '' },
         {
-          id: -2,
+          id: assistantId,
           role: 'assistant',
           content: '',
           created_at: '',
@@ -86,14 +91,16 @@ export function useMessages(id: number): UseMessages {
         setState((s) => ({
           ...s,
           messages: s.messages.map((m) =>
-            m.id === -2 ? { ...m, content: m.content + text } : m,
+            m.id === assistantId ? { ...m, content: m.content + text } : m,
           ),
         })),
       onDone: (messageId) => {
         setState((s) => ({
           ...s,
           messages: s.messages.map((m) =>
-            m.id === -2 ? { ...m, id: messageId, streaming: false } : m,
+            m.id === assistantId
+              ? { ...m, id: messageId, streaming: false }
+              : m,
           ),
         }));
         setSending(false);
@@ -102,7 +109,7 @@ export function useMessages(id: number): UseMessages {
       onError: (message) => {
         setState((s) => ({
           ...s,
-          messages: s.messages.filter((m) => m.id !== -2),
+          messages: s.messages.filter((m) => m.id !== assistantId),
           error: message,
         }));
         setSending(false);
