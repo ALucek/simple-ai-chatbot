@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (status !== 'authed') return null;
   return (
     <ConversationsProvider>
-      <div className="flex h-screen">
+      <div className="bg-bg flex h-screen">
         <Sidebar />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
