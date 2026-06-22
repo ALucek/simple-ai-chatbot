@@ -7,6 +7,10 @@ const replace = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 vi.mock('@/lib/auth-context');
 vi.mock('@/components/sidebar', () => ({ Sidebar: () => <div>sidebar</div> }));
+vi.mock('@/lib/conversations-context', () => ({
+  ConversationsProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
 
 function authValue(status: 'loading' | 'authed' | 'anon') {
   return {

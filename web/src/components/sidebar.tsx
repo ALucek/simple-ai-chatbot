@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useConversations } from '@/lib/use-conversations';
+import { useConversationsContext } from '@/lib/conversations-context';
 import { useAuth } from '@/lib/auth-context';
 import { ConversationItem } from './conversation-item';
 
@@ -9,7 +9,7 @@ export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { conversations, loading, error, create, rename, remove } =
-    useConversations();
+    useConversationsContext();
 
   async function onNew() {
     const convo = await create();

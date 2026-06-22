@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Sidebar } from './sidebar';
-import { useConversations } from '@/lib/use-conversations';
+import { useConversationsContext } from '@/lib/conversations-context';
 import { useAuth } from '@/lib/auth-context';
 
 const push = vi.fn();
@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
   useParams: () => ({ id: '' }),
 }));
-vi.mock('@/lib/use-conversations');
+vi.mock('@/lib/conversations-context');
 vi.mock('@/lib/auth-context');
 
 const rename = vi.fn();
@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe('Sidebar', () => {
   it('renders the conversation list', () => {
-    vi.mocked(useConversations).mockReturnValue({
+    vi.mocked(useConversationsContext).mockReturnValue({
       conversations: [
         { id: 1, title: 'One', created_at: 't', updated_at: 't' },
         { id: 2, title: 'Two', created_at: 't', updated_at: 't' },
@@ -39,6 +39,7 @@ describe('Sidebar', () => {
       create: vi.fn(),
       rename,
       remove,
+      patchConversation: vi.fn(),
     });
     render(<Sidebar />);
     expect(screen.getByText('One')).toBeInTheDocument();
@@ -52,13 +53,14 @@ describe('Sidebar', () => {
       created_at: 't',
       updated_at: 't',
     });
-    vi.mocked(useConversations).mockReturnValue({
+    vi.mocked(useConversationsContext).mockReturnValue({
       conversations: [],
       loading: false,
       error: null,
       create,
       rename,
       remove,
+      patchConversation: vi.fn(),
     });
     render(<Sidebar />);
     await userEvent.click(screen.getByText('New conversation'));
@@ -67,13 +69,14 @@ describe('Sidebar', () => {
   });
 
   it('shows the loading state', () => {
-    vi.mocked(useConversations).mockReturnValue({
+    vi.mocked(useConversationsContext).mockReturnValue({
       conversations: [],
       loading: true,
       error: null,
       create: vi.fn(),
       rename,
       remove,
+      patchConversation: vi.fn(),
     });
     render(<Sidebar />);
     expect(screen.getByText('Loading…')).toBeInTheDocument();
