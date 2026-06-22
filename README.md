@@ -1,6 +1,8 @@
 # simple-ai-chatbot
 
-A small, full-stack, multi-user streaming chatbot built from the ground up with no LLM framework, SDK, or agent library. The Go API calls the model's HTTP API directly and hand-rolls the streaming: it reads the raw upstream Server-Sent Events and re-streams them to a hand-built Next.js client that renders the reply token-by-token. Everything in between (auth, conversation storage, the SSE plumbing) — is plain Go and plain React.
+A small, full-stack, multi-user streaming chatbot built from the ground up with no LLM framework, SDK, or agent library. The Go API calls the model's HTTP API directly and hand-rolls the streaming: it reads the raw upstream Server-Sent Events and re-streams them to a hand-built Next.js client that renders the reply token-by-token. Everything in between (auth, conversation storage, the SSE plumbing) is plain Go and plain React.
+
+WIP learning project
 
 ## Components
 
