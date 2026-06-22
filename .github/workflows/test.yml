@@ -25,3 +25,48 @@ jobs:
       - run: make web-install
       # Runs prettier check, eslint, tsc, vitest, and next build — same as `make web-check` locally.
       - run: make web-check
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: devpassword
+          POSTGRES_DB: chat
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d chat"
+          --health-interval 5s --health-timeout 3s --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER: app
+      DB_PASSWORD: devpassword
+      DB_NAME: chat
+      PORT: '8080'
+      JWT_SECRET: test-secret-at-least-32-bytes-long-xx
+      OPENROUTER_API_KEY: test-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: make migrate-up
+      - run: make web-install
+      - run: cd web && pnpm exec playwright install --with-deps chromium
+      - run: make e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
