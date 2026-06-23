@@ -9,6 +9,7 @@ per-user conversations, and replies streamed from an LLM over Server-Sent Events
 - **Postgres** (local via Docker), schema managed with **goose** migrations
 - **Auth**: `bcrypt` + HS256 JWT access tokens + DB-backed refresh tokens
 - **LLM**: OpenRouter (OpenAI-compatible) streamed as raw SSE
+- **Observability**: structured `log/slog` JSON access logs + per-request id (stdlib, zero deps)
 - **Tests**: `testcontainers-go` against a real ephemeral Postgres
 
 ## Quick start
@@ -41,6 +42,7 @@ Read from the environment (see `.env.example`):
 | `SYSTEM_PROMPT` | no | `You are a helpful assistant.` | prepended to every request |
 | `ALLOWED_ORIGIN` | no | `http://localhost:3000` | CORS allow-origin for the web client |
 | `DATABASE_URL` | no | — | full DSN override; used verbatim if set (e.g. a Cloud SQL socket), else built from `DB_*` |
+| `LOG_LEVEL` | no | `info` | `debug` / `info` / `warn` / `error`; unknown → `info` |
 
 ## API
 
@@ -49,7 +51,8 @@ All `/api/*` routes except signup/login/refresh require
 
 | Method & path | Purpose |
 |---|---|
-| `GET /health` | DB-backed liveness check |
+| `GET /livez` | process liveness — always `200`, no dependency checks |
+| `GET /readyz` | dependency readiness — `200` when the DB is reachable, `503` when not |
 | `POST /api/signup` | create user → `{access_token, refresh_token}` |
 | `POST /api/login` | verify password → `{access_token, refresh_token}` |
 | `POST /api/refresh` | exchange refresh token for a new access token |
@@ -83,6 +86,23 @@ data: {"title":"Plan a trip to"}
 - `title` — on a conversation's first message only, its generated name (may follow `done`)
 - `error` — something failed mid-stream (`{"error":"..."}`)
 
+## Observability
+
+Every request flows through `withRequestID` → `withLogging` → `withCORS` (request id
+outermost, so logging and handlers see it). Each request emits **one** structured JSON
+line on stdout via `log/slog`:
+
+```json
+{"time":"...","level":"INFO","msg":"request","method":"POST","path":"/api/conversations/1/messages","status":200,"bytes":512,"duration_ms":1843,"remote_addr":"...","request_id":"a1b2...","user_id":7}
+```
+
+- **Request id** — an inbound `X-Request-Id` is honored; otherwise one is minted (16 hex
+  bytes). It's stored in `context`, echoed as the `X-Request-Id` response header, and
+  auto-attached to every `slog` line through a small context-aware handler.
+- **`user_id`** is present only on authenticated requests; omitted otherwise.
+- **Health probes** (`/livez`, `/readyz`) log at `debug`, so readiness polling doesn't
+  flood the log at the default `info` level. Set `LOG_LEVEL=debug` to see them.
+
 ## Container image
 
 `make docker-build` builds a multi-stage image: the static Go binary (`CGO_ENABLED=0`) is
@@ -108,6 +128,7 @@ api/
   main.go          # wiring, routes (newMux), graceful shutdown
   config.go        # env config
   db.go            # pgxpool connection + health check
+  logging.go       # request-id + access-log middleware, slog setup, Flusher-safe wrapper
   auth.go          # bcrypt, JWT, refresh tokens, middleware
   auth_handlers.go # signup / login / refresh / logout / me
   chat.go          # conversations CRUD + streaming + titles
