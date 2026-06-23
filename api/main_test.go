@@ -33,3 +33,23 @@ func TestLiveHandler_OK(t *testing.T) {
 		t.Fatalf("want 200, got %d", rec.Code)
 	}
 }
+
+func TestSecurityHeaders(t *testing.T) {
+	h := withSecurityHeaders(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	want := map[string]string{
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"Referrer-Policy":         "no-referrer",
+		"Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+	}
+	for k, v := range want {
+		if got := rec.Header().Get(k); got != v {
+			t.Errorf("%s: want %q, got %q", k, v, got)
+		}
+	}
+}

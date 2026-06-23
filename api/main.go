@@ -41,7 +41,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           withRequestID(withLogging(withCORS(cfg.AllowedOrigin, withMaxBody(mux)))),
+		Handler:           withRequestID(withLogging(withSecurityHeaders(withCORS(cfg.AllowedOrigin, withMaxBody(mux))))),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -92,6 +92,18 @@ const maxBodyBytes = 1 << 20 // 1 MiB
 func withMaxBody(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// withSecurityHeaders sets a baseline of security response headers on every response.
+func withSecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
 }
