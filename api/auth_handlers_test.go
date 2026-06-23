@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -205,5 +206,86 @@ func TestSignup_StoresFamilyID(t *testing.T) {
 	}
 	if family == "" {
 		t.Fatal("family_id must be set on a new refresh token")
+	}
+}
+
+func refreshTokenOf(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+	var out struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode refresh_token: %v", err)
+	}
+	return out.RefreshToken
+}
+
+func TestRefresh_RotatesToken(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	r0 := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "rot@x.com", "password": "password123"}))
+
+	rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0})
+	if rr.Code != http.StatusOK {
+		t.Fatalf("refresh: want 200, got %d", rr.Code)
+	}
+	r1 := refreshTokenOf(t, rr)
+	if r1 == "" || r1 == r0 {
+		t.Fatalf("refresh must return a new refresh token, got %q (old %q)", r1, r0)
+	}
+	// new token works; replaying the rotated old one is rejected
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r1}); rr.Code != http.StatusOK {
+		t.Fatalf("new token: want 200, got %d", rr.Code)
+	}
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("old token reuse: want 401, got %d", rr.Code)
+	}
+}
+
+func TestRefresh_ReuseRevokesFamilyOnly(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	// login A (family 1)
+	r0 := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "reuse@x.com", "password": "password123"}))
+	// login B (family 2) — separate login of the same user
+	rB := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/login", "",
+		map[string]string{"email": "reuse@x.com", "password": "password123"}))
+
+	// rotate family 1: r0 -> r1
+	r1 := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}))
+	// replay the rotated r0 -> theft: 401 and family 1 revoked
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("replay: want 401, got %d", rr.Code)
+	}
+	// r1 (same family) is now dead
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r1}); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("family sibling after reuse: want 401, got %d", rr.Code)
+	}
+	// rB (different family) survives
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": rB}); rr.Code != http.StatusOK {
+		t.Fatalf("other family after reuse: want 200, got %d", rr.Code)
+	}
+}
+
+func TestLogout_DeletesWithoutRevokingOthers(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	r0 := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "lo@x.com", "password": "password123"}))
+	rB := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/login", "",
+		map[string]string{"email": "lo@x.com", "password": "password123"}))
+
+	if lo := do(t, mux, http.MethodPost, "/api/logout", "", map[string]string{"refresh_token": r0}); lo.Code != http.StatusNoContent {
+		t.Fatalf("logout: want 204, got %d", lo.Code)
+	}
+	// logged-out token: plain 401, not a reuse alarm
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+		t.Fatalf("refresh after logout: want 401, got %d", rr.Code)
+	}
+	// the other login still works (logout didn't revoke a family)
+	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": rB}); rr.Code != http.StatusOK {
+		t.Fatalf("other session after logout: want 200, got %d", rr.Code)
 	}
 }

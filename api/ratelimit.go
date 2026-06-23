@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	authRatePerMin = 5
-	authRateBurst  = 5
+	authRatePerMin = 10
+	authRateBurst  = 10
 	chatRatePerMin = 20
 	chatRateBurst  = 20
 )

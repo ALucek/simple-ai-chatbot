@@ -96,21 +96,30 @@ func (a *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "refresh_token required"})
 		return
 	}
+	h := hashToken(body.RefreshToken)
+
+	// Claim: authorize and consume the token
 	var userID int64
+	var familyID string
 	err := a.pool.QueryRow(r.Context(),
-		`select user_id from refresh_tokens
-		 where token_hash = $1 and not revoked and expires_at > now()`,
-		hashToken(body.RefreshToken)).Scan(&userID)
+		`update refresh_tokens set revoked = true
+		 where token_hash = $1 and not revoked and expires_at > now()
+		 returning user_id, family_id`, h).Scan(&userID, &familyID)
 	if err != nil {
+		// Not claimable. treat as theft and revoke its whole family.
+		var reusedFamily string
+		if a.pool.QueryRow(r.Context(),
+			`select family_id from refresh_tokens where token_hash = $1 and revoked`, h).
+			Scan(&reusedFamily) == nil {
+			_, _ = a.pool.Exec(r.Context(),
+				`update refresh_tokens set revoked = true where family_id = $1`, reusedFamily)
+		}
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid refresh token"})
 		return
 	}
-	access, err := mintAccessToken(a.secret, userID, time.Now())
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not mint token"})
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]string{"access_token": access})
+
+	// Rotate: issue a fresh access + refresh token in the same family.
+	a.issueTokens(w, r, userID, familyID, http.StatusOK)
 }
 
 func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +128,7 @@ func (a *Auth) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.RefreshToken != "" {
 		_, _ = a.pool.Exec(r.Context(),
-			`update refresh_tokens set revoked = true where token_hash = $1`,
+			`delete from refresh_tokens where token_hash = $1`,
 			hashToken(body.RefreshToken))
 	}
 	w.WriteHeader(http.StatusNoContent) // idempotent: always 204
