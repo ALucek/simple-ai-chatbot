@@ -25,6 +25,7 @@ func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email and password required"})
 		return
 	}
+	c.Email = normalizeEmail(c.Email)
 	if len(c.Password) > maxPasswordBytes {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "password too long"})
 		return
@@ -59,12 +60,15 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &c) {
 		return
 	}
+	c.Email = normalizeEmail(c.Email)
 	var userID int64
 	var hash string
 	err := a.pool.QueryRow(r.Context(),
 		`select id, password_hash from users where email = $1`, c.Email).Scan(&userID, &hash)
-	// Same generic 401 whether the email is unknown or the password is wrong.
-	if err != nil || checkPassword(hash, c.Password) != nil {
+	if err != nil {
+		hash = dummyHash // compare anyway, so timing doesn't reveal existence
+	}
+	if checkPassword(hash, c.Password) != nil || err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
 		return
 	}

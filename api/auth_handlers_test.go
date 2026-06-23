@@ -147,3 +147,48 @@ func TestSignup_PasswordTooLong(t *testing.T) {
 		t.Fatalf("want 400, got %d (%s)", rec.Code, rec.Body)
 	}
 }
+
+func TestLogin_GenericErrorIdentical(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "known@x.com", "password": "password123"})
+
+	unknown := do(t, mux, http.MethodPost, "/api/login", "",
+		map[string]string{"email": "nobody@x.com", "password": "password123"})
+	wrong := do(t, mux, http.MethodPost, "/api/login", "",
+		map[string]string{"email": "known@x.com", "password": "wrongpassword"})
+
+	if unknown.Code != http.StatusUnauthorized || wrong.Code != http.StatusUnauthorized {
+		t.Fatalf("want both 401, got unknown=%d wrong=%d", unknown.Code, wrong.Code)
+	}
+	if unknown.Body.String() != wrong.Body.String() {
+		t.Fatalf("bodies differ:\n unknown=%s\n wrong=%s", unknown.Body, wrong.Body)
+	}
+}
+
+func TestSignup_Login_CaseInsensitive(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	if rec := do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "User@X.com", "password": "password123"}); rec.Code != http.StatusCreated {
+		t.Fatalf("signup: want 201, got %d", rec.Code)
+	}
+	// login with different casing must succeed
+	if rec := do(t, mux, http.MethodPost, "/api/login", "",
+		map[string]string{"email": "user@x.com", "password": "password123"}); rec.Code != http.StatusOK {
+		t.Fatalf("login lowercase: want 200, got %d (%s)", rec.Code, rec.Body)
+	}
+}
+
+func TestSignup_CaseInsensitiveDuplicate(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "Dup@X.com", "password": "password123"})
+	rec := do(t, mux, http.MethodPost, "/api/signup", "",
+		map[string]string{"email": "dup@x.com", "password": "password123"})
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("want 409, got %d (%s)", rec.Code, rec.Body)
+	}
+}

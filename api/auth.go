@@ -113,3 +113,19 @@ func userIDFromContext(ctx context.Context) (int64, bool) {
 	id, ok := ctx.Value(userIDKey).(int64)
 	return id, ok
 }
+
+// dummyHash is compared against when the email is unknown
+var dummyHash = mustHash("constant-time-placeholder")
+
+func mustHash(plain string) string {
+	h, err := hashPassword(plain)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// normalizeEmail lowercases and trims so email comparison is case-insensitive.
+func normalizeEmail(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
