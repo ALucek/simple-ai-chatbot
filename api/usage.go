@@ -21,8 +21,7 @@ func recordUsage(ctx context.Context, pool *pgxpool.Pool, userID int64, u tokenU
 	return err
 }
 
-// usageSince returns the total tokens (prompt + completion) a user has spent
-// since the given time. The rolling window is just this predicate — no reset job.
+// usageSince returns the total tokens (prompt + completion) a user has spent since the given time
 func usageSince(ctx context.Context, pool *pgxpool.Pool, userID int64, since time.Time) (int, error) {
 	var total int
 	err := pool.QueryRow(ctx,
