@@ -25,7 +25,7 @@ export default defineConfig({
     },
     {
       command: 'cd ../api && go run .',
-      url: `http://localhost:${API_PORT}/health`,
+      url: `http://localhost:${API_PORT}/readyz`,
       env: { OPENROUTER_BASE_URL: `http://localhost:${FAKE_PORT}` },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

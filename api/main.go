@@ -60,13 +60,20 @@ func main() {
 	}
 }
 
-// healthHandler reports 200 when check passes, 503 when it fails.
-func healthHandler(check func(context.Context) error) http.HandlerFunc {
+// readyHandler reports 200 when the dependency check passes, 503 when it fails.
+func readyHandler(check func(context.Context) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := check(r.Context()); err != nil {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "unavailable"})
 			return
 		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	}
+}
+
+// liveHandler reports 200 as long as the process is serving; no dependency checks.
+func liveHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
 }
@@ -82,7 +89,8 @@ func newMux(check func(context.Context) error, auth *Auth, chat *Chat) *http.Ser
 	protect := func(h http.HandlerFunc) http.Handler { return auth.Middleware(http.HandlerFunc(h)) }
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", healthHandler(check))
+	mux.HandleFunc("GET /livez", liveHandler())
+	mux.HandleFunc("GET /readyz", readyHandler(check))
 	mux.HandleFunc("POST /api/signup", auth.Signup)
 	mux.HandleFunc("POST /api/login", auth.Login)
 	mux.HandleFunc("POST /api/refresh", auth.Refresh)

@@ -123,4 +123,4 @@ hooks:
 	pre-commit install --hook-type pre-push
 
 health:
-	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:$(PORT)/health
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:$(PORT)/readyz
