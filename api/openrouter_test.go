@@ -22,7 +22,7 @@ func TestStream_SkipsCommentsAndStopsAtDone(t *testing.T) {
 	client := &openRouterClient{baseURL: srv.URL, http: srv.Client()}
 
 	var got strings.Builder
-	if err := client.stream(context.Background(), nil, func(s string) { got.WriteString(s) }); err != nil {
+	if _, err := client.stream(context.Background(), nil, func(s string) { got.WriteString(s) }); err != nil {
 		t.Fatalf("stream: %v", err)
 	}
 	if got.String() != "Hello" {
@@ -36,7 +36,25 @@ func TestStream_Non200IsError(t *testing.T) {
 	}))
 	defer srv.Close()
 	client := &openRouterClient{baseURL: srv.URL, http: srv.Client()}
-	if err := client.stream(context.Background(), nil, func(string) {}); err == nil {
+	if _, err := client.stream(context.Background(), nil, func(string) {}); err == nil {
 		t.Fatal("want error on non-200, got nil")
+	}
+}
+
+func TestStream_ParsesUsage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, deltaFrame("hi"))
+		fmt.Fprint(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":11,\"completion_tokens\":7}}\n\n")
+		fmt.Fprint(w, "data: [DONE]\n\n")
+	}))
+	defer srv.Close()
+	client := &openRouterClient{baseURL: srv.URL, http: srv.Client()}
+
+	usage, err := client.stream(context.Background(), nil, func(string) {})
+	if err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	if usage.Prompt != 11 || usage.Completion != 7 {
+		t.Fatalf("want {11 7}, got %+v", usage)
 	}
 }

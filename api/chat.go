@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -241,7 +242,7 @@ func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	var reply strings.Builder
-	err = c.llm.stream(r.Context(), msgs, func(text string) {
+	usage, err := c.llm.stream(r.Context(), msgs, func(text string) {
 		reply.WriteString(text)
 		writeSSE(w, "delta", map[string]string{"text": text})
 		flusher.Flush()
@@ -264,6 +265,9 @@ func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
 	_, _ = c.pool.Exec(r.Context(),
 		`update conversations set updated_at = now() where id = $1`, id)
 
+	if err := recordUsage(r.Context(), c.pool, userID, usage); err != nil {
+		slog.ErrorContext(r.Context(), "record usage", "err", err)
+	}
 	writeSSE(w, "done", map[string]int64{"message_id": msgID})
 	flusher.Flush()
 

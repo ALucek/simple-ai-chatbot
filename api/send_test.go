@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeOpenRouter returns a client pointed at a server that responds with the given
@@ -154,5 +155,30 @@ func TestSend_UpstreamError(t *testing.T) {
 	}
 	if len(roles) != 1 || roles[0] != "user" {
 		t.Fatalf("want only [user], got %v", roles)
+	}
+}
+
+func TestSend_RecordsUsage(t *testing.T) {
+	resetDB(t)
+	client := fakeOpenRouter(t, http.StatusOK,
+		deltaFrame("hi"),
+		"data: {\"choices\":[],\"usage\":{\"prompt_tokens\":4,\"completion_tokens\":6}}\n\n",
+		"data: [DONE]\n\n")
+	mux := newTestMux(client)
+	ta, uid := signup(t, mux, "a@x.com")
+	cid := createConversation(t, mux, ta)
+
+	rec := do(t, mux, http.MethodPost, fmt.Sprintf("/api/conversations/%d/messages", cid), ta,
+		map[string]string{"content": "hi"})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+
+	total, err := usageSince(context.Background(), testPool, uid, time.Now().Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("usageSince: %v", err)
+	}
+	if total != 10 {
+		t.Fatalf("want recorded usage 10, got %d", total)
 	}
 }
