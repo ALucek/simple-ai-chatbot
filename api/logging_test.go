@@ -76,3 +76,39 @@ func TestContextHandler_AddsRequestID(t *testing.T) {
 		t.Fatalf("expected request_id attr, got %s", buf.String())
 	}
 }
+
+func TestWithLogging_EmitsRequestLine(t *testing.T) {
+	var buf bytes.Buffer
+	slog.SetDefault(slog.New(contextHandler{slog.NewJSONHandler(&buf, nil)}))
+
+	h := withRequestID(withLogging(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTeapot)
+		_, _ = w.Write([]byte("xy"))
+	})))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/foo", nil))
+
+	out := buf.String()
+	for _, want := range []string{
+		`"msg":"request"`, `"method":"GET"`, `"path":"/foo"`,
+		`"status":418`, `"bytes":2`, `"duration_ms":`, `"request_id":`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("access line missing %s in: %s", want, out)
+		}
+	}
+}
+
+func TestWithLogging_HealthPathsAreDebug(t *testing.T) {
+	var buf bytes.Buffer
+	slog.SetDefault(slog.New(contextHandler{
+		slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelInfo}),
+	}))
+	h := withLogging(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+
+	if strings.Contains(buf.String(), `"msg":"request"`) {
+		t.Fatalf("health probe should not log at info level: %s", buf.String())
+	}
+}

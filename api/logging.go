@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 const requestIDHeader = "X-Request-Id"
@@ -82,4 +83,29 @@ func (h contextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 func (h contextHandler) WithGroup(name string) slog.Handler {
 	return contextHandler{h.Handler.WithGroup(name)}
+}
+
+func withLogging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rw, r)
+
+		level := slog.LevelInfo
+		if r.URL.Path == "/livez" || r.URL.Path == "/readyz" {
+			level = slog.LevelDebug
+		}
+		attrs := []slog.Attr{
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.Int("status", rw.status),
+			slog.Int("bytes", rw.bytes),
+			slog.Int64("duration_ms", time.Since(start).Milliseconds()),
+			slog.String("remote_addr", r.RemoteAddr),
+		}
+		if uid, ok := userIDFromContext(r.Context()); ok {
+			attrs = append(attrs, slog.Int64("user_id", uid))
+		}
+		slog.LogAttrs(r.Context(), level, "request", attrs...)
+	})
 }
