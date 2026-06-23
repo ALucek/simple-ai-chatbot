@@ -10,6 +10,7 @@ per-user conversations, and replies streamed from an LLM over Server-Sent Events
 - **Auth**: `bcrypt` + HS256 JWT access tokens + DB-backed refresh tokens
 - **LLM**: OpenRouter (OpenAI-compatible) streamed as raw SSE
 - **Observability**: structured `log/slog` JSON access logs + per-request id (stdlib, zero deps)
+- **Guardrails**: request/message size caps, hand-rolled token-bucket rate limiting (IP on auth, user on chat), a daily per-user token budget
 - **Tests**: `testcontainers-go` against a real ephemeral Postgres
 
 ## Quick start
@@ -43,6 +44,7 @@ Read from the environment (see `.env.example`):
 | `ALLOWED_ORIGIN` | no | `http://localhost:3000` | CORS allow-origin for the web client |
 | `DATABASE_URL` | no | — | full DSN override; used verbatim if set (e.g. a Cloud SQL socket), else built from `DB_*` |
 | `LOG_LEVEL` | no | `info` | `debug` / `info` / `warn` / `error`; unknown → `info` |
+| `TOKEN_BUDGET_DAILY` | no | `8192` | per-user rolling-24h token budget; over → `429`. Unparseable/≤0 → `8192` |
 
 ## API
 
@@ -103,6 +105,26 @@ line on stdout via `log/slog`:
 - **Health probes** (`/livez`, `/readyz`) log at `debug`, so readiness polling doesn't
   flood the log at the default `info` level. Set `LOG_LEVEL=debug` to see them.
 
+## Guardrails
+
+Limits that bound abuse and (paid) LLM cost — all stdlib, zero deps:
+
+- **Request body cap** — a `withMaxBody` middleware caps every request body at **1 MiB**; an
+  over-cap body is rejected with **413** `{"error":"request too large"}` (a shared `decodeJSON`
+  helper maps `*http.MaxBytesError` → 413, any other decode error → 400).
+- **Message length cap** — a chat message over **8000 characters** is rejected with **400**.
+- **Rate limiting** — a hand-rolled token-bucket limiter (`ratelimit.go`): credential endpoints
+  (`/signup`, `/login`, `/refresh`) are limited **per IP** (5/min, burst 5), the chat send
+  endpoint **per user** (20/min, burst 20). Over-limit → **429** `{"error":"rate limit
+  exceeded"}` with a `Retry-After` header. IP keying uses `RemoteAddr` for now; reading
+  `X-Forwarded-For` behind a proxy is an M7 follow-up.
+- **Daily token budget** — every completed LLM call's token usage (`stream_options.
+  include_usage`) is written to an append-only `token_usage` ledger. Before each send the API
+  sums a user's usage over the last 24h; once it reaches `TOKEN_BUDGET_DAILY` the next send is
+  blocked with **429** `{"error":"daily token budget exceeded"}`. The ledger references `users`
+  only (not conversations), so deleting a chat can't reset the cap. Because a call's cost isn't
+  known until it finishes, enforcement is "block the *next* call when already at/over budget."
+
 ## Container image
 
 `make docker-build` builds a multi-stage image: the static Go binary (`CGO_ENABLED=0`) is
@@ -129,9 +151,11 @@ api/
   config.go        # env config
   db.go            # pgxpool connection + health check
   logging.go       # request-id + access-log middleware, slog setup, Flusher-safe wrapper
+  ratelimit.go     # hand-rolled token-bucket rate limiter + middleware
+  usage.go         # append-only token-usage ledger (record + windowed sum)
   auth.go          # bcrypt, JWT, refresh tokens, middleware
   auth_handlers.go # signup / login / refresh / logout / me
-  chat.go          # conversations CRUD + streaming + titles
+  chat.go          # conversations CRUD + streaming + titles + size/budget guards
   openrouter.go    # OpenRouter SSE client
   migrations/      # goose SQL migrations
   *_test.go        # unit + integration tests
