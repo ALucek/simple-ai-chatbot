@@ -129,3 +129,11 @@ func mustHash(plain string) string {
 func normalizeEmail(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
 }
+
+func newFamilyID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}

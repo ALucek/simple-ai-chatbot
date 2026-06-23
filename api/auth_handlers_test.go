@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -190,5 +191,19 @@ func TestSignup_CaseInsensitiveDuplicate(t *testing.T) {
 		map[string]string{"email": "dup@x.com", "password": "password123"})
 	if rec.Code != http.StatusConflict {
 		t.Fatalf("want 409, got %d (%s)", rec.Code, rec.Body)
+	}
+}
+
+func TestSignup_StoresFamilyID(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	signup(t, mux, "fam@x.com")
+	var family string
+	if err := testPool.QueryRow(context.Background(),
+		`select family_id from refresh_tokens limit 1`).Scan(&family); err != nil {
+		t.Fatalf("query family_id: %v", err)
+	}
+	if family == "" {
+		t.Fatal("family_id must be set on a new refresh token")
 	}
 }

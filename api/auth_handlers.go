@@ -52,7 +52,12 @@ func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not create user"})
 		return
 	}
-	a.issueTokens(w, r, userID, http.StatusCreated)
+	family, err := newFamilyID()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not start session"})
+		return
+	}
+	a.issueTokens(w, r, userID, family, http.StatusCreated)
 }
 
 func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +77,12 @@ func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
 		return
 	}
-	a.issueTokens(w, r, userID, http.StatusOK)
+	family, ferr := newFamilyID()
+	if ferr != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not start session"})
+		return
+	}
+	a.issueTokens(w, r, userID, family, http.StatusOK)
 }
 
 func (a *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +141,7 @@ func (a *Auth) Me(w http.ResponseWriter, r *http.Request) {
 }
 
 // issueTokens mints an access token, stores a new (hashed) refresh token, writes both.
-func (a *Auth) issueTokens(w http.ResponseWriter, r *http.Request, userID int64, status int) {
+func (a *Auth) issueTokens(w http.ResponseWriter, r *http.Request, userID int64, familyID string, status int) {
 	access, err := mintAccessToken(a.secret, userID, time.Now())
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not mint token"})
@@ -143,8 +153,8 @@ func (a *Auth) issueTokens(w http.ResponseWriter, r *http.Request, userID int64,
 		return
 	}
 	_, err = a.pool.Exec(r.Context(),
-		`insert into refresh_tokens (token_hash, user_id, expires_at) values ($1, $2, $3)`,
-		hashToken(raw), userID, time.Now().Add(refreshTokenTTL))
+		`insert into refresh_tokens (token_hash, user_id, family_id, expires_at) values ($1, $2, $3, $4)`,
+		hashToken(raw), userID, familyID, time.Now().Add(refreshTokenTTL))
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not store refresh token"})
 		return
