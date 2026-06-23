@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -39,7 +40,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           withRequestID(withLogging(withCORS(cfg.AllowedOrigin, mux))),
+		Handler:           withRequestID(withLogging(withCORS(cfg.AllowedOrigin, withMaxBody(mux)))),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -82,6 +83,30 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+const maxBodyBytes = 1 << 20 // 1 MiB
+
+// withMaxBody caps the request body so a single request can't exhaust memory.
+func withMaxBody(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+		next.ServeHTTP(w, r)
+	})
+}
+
+// decodeJSON reads the (size-capped) request body into dst.
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "request too large"})
+		} else {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+		}
+		return false
+	}
+	return true
 }
 
 // newMux registers every route.

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -33,6 +34,8 @@ type message struct {
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
 }
+
+const maxMessageChars = 8000
 
 // List returns the caller's conversations, newest activity first.
 func (c *Chat) List(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +136,10 @@ func (c *Chat) Rename(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Title string `json:"title"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Title == "" {
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.Title == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "title required"})
 		return
 	}
@@ -198,8 +204,15 @@ func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Content string `json:"content"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Content == "" {
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.Content == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "content required"})
+		return
+	}
+	if utf8.RuneCountInString(body.Content) > maxMessageChars {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "message too long (max 8000 characters)"})
 		return
 	}
 

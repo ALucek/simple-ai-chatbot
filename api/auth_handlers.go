@@ -18,7 +18,10 @@ type credentials struct {
 
 func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
 	var c credentials
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil || c.Email == "" || c.Password == "" {
+	if !decodeJSON(w, r, &c) {
+		return
+	}
+	if c.Email == "" || c.Password == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email and password required"})
 		return
 	}
@@ -45,8 +48,7 @@ func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
 
 func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
 	var c credentials
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
+	if !decodeJSON(w, r, &c) {
 		return
 	}
 	var userID int64
@@ -65,7 +67,10 @@ func (a *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		RefreshToken string `json:"refresh_token"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RefreshToken == "" {
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.RefreshToken == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "refresh_token required"})
 		return
 	}

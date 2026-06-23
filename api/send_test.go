@@ -201,3 +201,17 @@ func TestSend_OverTokenBudget(t *testing.T) {
 		t.Fatalf("want 429 over budget, got %d", rec.Code)
 	}
 }
+
+func TestSend_MessageTooLong(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(fakeOpenRouter(t, http.StatusOK))
+	ta, _ := signup(t, mux, "a@x.com")
+	cid := createConversation(t, mux, ta)
+
+	long := strings.Repeat("x", maxMessageChars+1)
+	rec := do(t, mux, http.MethodPost, fmt.Sprintf("/api/conversations/%d/messages", cid), ta,
+		map[string]string{"content": long})
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("want 400, got %d", rec.Code)
+	}
+}
