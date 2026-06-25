@@ -55,3 +55,8 @@ repos:
         files: ^web/
         pass_filenames: false
         stages: [pre-push]
+      - id: scan-secrets
+        name: gitleaks (staged)
+        entry: make scan-secrets-staged
+        language: system
+        pass_filenames: false

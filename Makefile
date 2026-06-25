@@ -6,6 +6,7 @@ DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?
         api-run api-fmt api-fmt-check api-lint api-typecheck api-test api-vuln api-sast \
         web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test web-audit e2e e2e-local \
         fmt lint typecheck test api-check web-check check \
+		scan-secrets scan-secrets-staged scan-images security \
         hooks health
 
 # ── Database & migrations ──────────────────────────────────────────────
@@ -95,6 +96,17 @@ e2e:
 	cd web && pnpm e2e
 
 e2e-local: db-up migrate-up e2e
+
+# ── Security scanning ────────────────────────────────────────────────────
+
+scan-secrets:
+	gitleaks dir . --config .gitleaks.toml --no-banner --redact
+
+scan-secrets-staged:
+	gitleaks git --staged --config .gitleaks.toml --no-banner --redact
+
+# Fast static scans (no Docker) — what the CI `security` job runs.
+security: api-vuln api-sast web-audit scan-secrets
 
 # ── Containers / full stack ────────────────────────────────────────────
 

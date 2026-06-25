@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "test fixtures / known non-secrets"
+regexes = [
+  '''test-secret-at-least-32-bytes-long-xx''', # JWT_SECRET used in tests + CI
+]
+# Path excludes: gitignored, never-committed files that `gitleaks dir` reads off
+# disk anyway. Excluded by path only — real secret *values* are never allowlisted.
+paths = [
+  '''^\.env$''',       # local secrets file; gitignored, the real control is .gitignore
+  '''(^|/)\.next/''',  # Next.js build output; framework-generated ephemeral keys
+]
