@@ -3,7 +3,7 @@ export
 DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
 .PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset docker-build stack-up stack-down\
-        api-run api-fmt api-fmt-check api-lint api-typecheck api-test api-vuln \
+        api-run api-fmt api-fmt-check api-lint api-typecheck api-test api-vuln api-sast \
         web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test e2e e2e-local \
         fmt lint typecheck test api-check web-check check \
         hooks health
@@ -58,6 +58,9 @@ api-test:
 
 api-vuln:
 	cd api && go tool govulncheck ./...
+
+api-sast:
+	cd api && go tool gosec -severity medium -confidence medium -quiet ./...
 
 # ── Web ────────────────────────────────────────────────────────────────
 
