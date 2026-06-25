@@ -7,7 +7,7 @@ per-user conversations, and replies streamed from an LLM over Server-Sent Events
 
 - **Go** `net/http` (1.22 method+path routing), `pgx`/`pgxpool`
 - **Postgres** (local via Docker), schema managed with **goose** migrations
-- **Auth**: `bcrypt` + HS256 JWT access tokens + DB-backed refresh tokens
+- **Auth**: `bcrypt` + HS256 JWT access tokens + **rotating** DB-backed refresh tokens (reuse detection), case-insensitive email, constant-time login
 - **LLM**: OpenRouter (OpenAI-compatible) streamed as raw SSE
 - **Observability**: structured `log/slog` JSON access logs + per-request id (stdlib, zero deps)
 - **Guardrails**: request/message size caps, hand-rolled token-bucket rate limiting (IP on auth, user on chat), a daily per-user token budget
@@ -57,7 +57,7 @@ All `/api/*` routes except signup/login/refresh require
 | `GET /readyz` | dependency readiness — `200` when the DB is reachable, `503` when not |
 | `POST /api/signup` | create user → `{access_token, refresh_token}` |
 | `POST /api/login` | verify password → `{access_token, refresh_token}` |
-| `POST /api/refresh` | exchange refresh token for a new access token |
+| `POST /api/refresh` | rotate: exchange a refresh token for a new access **and** refresh token |
 | `POST /api/logout` | revoke a refresh token |
 | `GET /api/me` | current user |
 | `GET /api/conversations` | list the caller's conversations |
@@ -124,6 +124,31 @@ Limits that bound abuse and (paid) LLM cost — all stdlib, zero deps:
   blocked with **429** `{"error":"daily token budget exceeded"}`. The ledger references `users`
   only (not conversations), so deleting a chat can't reset the cap. Because a call's cost isn't
   known until it finishes, enforcement is "block the *next* call when already at/over budget."
+
+## Security
+
+Auth hardening that lives alongside the guardrails above — all stdlib + the deps already
+in the tree:
+
+- **Password rules** — signup rejects a password over **72 bytes** (bcrypt's hard limit, so
+  a long password can't be silently truncated) or under **8 characters**, both with **400**.
+- **Case-insensitive email** — email is normalized (`lower` + trim) on signup and login, and
+  a `unique index on users (lower(email))` enforces it at the database, so `Foo@x.com` and
+  `foo@x.com` are one account.
+- **Constant-time login** — when an email isn't found the API still runs one bcrypt compare
+  against a fixed dummy hash, so login timing can't be used to enumerate which emails are
+  registered; unknown-email and wrong-password return the identical generic **401**.
+- **Security headers** — a `withSecurityHeaders` middleware sets `X-Content-Type-Options:
+  nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and a strict
+  `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` on every response
+  (the API only ever returns JSON). HSTS is deferred to the load balancer (M7).
+- **Refresh-token rotation + reuse detection** — every `/refresh` atomically consumes the
+  presented token and issues a **new** access *and* refresh token in the same **family** (a
+  random `family_id` minted at login and carried through rotations). Replaying an
+  already-rotated token is treated as theft: the whole family is revoked, so the attacker and
+  the victim both have to re-authenticate, while the user's other logins (other families) stay
+  valid. `logout` deletes its token, so a logged-out token reads as a plain invalid token, not
+  a reuse alarm.
 
 ## Container image
 
