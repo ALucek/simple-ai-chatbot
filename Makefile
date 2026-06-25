@@ -4,7 +4,7 @@ DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?
 
 .PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset docker-build stack-up stack-down\
         api-run api-fmt api-fmt-check api-lint api-typecheck api-test api-vuln api-sast \
-        web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test e2e e2e-local \
+        web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test web-audit e2e e2e-local \
         fmt lint typecheck test api-check web-check check \
         hooks health
 
@@ -87,6 +87,9 @@ web-typecheck:
 
 web-test:
 	cd web && pnpm test
+
+web-audit:
+	cd web && pnpm audit --audit-level high
 
 e2e:
 	cd web && pnpm e2e
