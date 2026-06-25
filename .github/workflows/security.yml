@@ -21,13 +21,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
       - name: Install gitleaks
-        run: go install github.com/gitleaks/gitleaks/v8@latest
+        run: go install github.com/zricethezav/gitleaks/v8@v8.30.1
       - run: make web-install
       - run: make security
   image-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: aquasecurity/setup-trivy@v0.2.3
+      - uses: aquasecurity/setup-trivy@v0.2.6
       - run: make docker-build
       - run: make scan-images
