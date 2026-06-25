@@ -108,6 +108,10 @@ scan-secrets-staged:
 # Fast static scans (no Docker) — what the CI `security` job runs.
 security: api-vuln api-sast web-audit scan-secrets
 
+scan-images:
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 simple-ai-chatbot-api:local
+	trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 simple-ai-chatbot-web:local
+
 # ── Containers / full stack ────────────────────────────────────────────
 
 docker-build:
