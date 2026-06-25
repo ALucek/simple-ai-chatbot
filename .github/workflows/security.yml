@@ -1,0 +1,33 @@
+name: security
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1' 
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - name: Install gitleaks
+        run: go install github.com/gitleaks/gitleaks/v8@latest
+      - run: make web-install
+      - run: make security
+  image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/setup-trivy@v0.2.3
+      - run: make docker-build
+      - run: make scan-images
