@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestStream_SkipsCommentsAndStopsAtDone(t *testing.T) {
@@ -79,5 +80,23 @@ func TestNewLLMHTTPClient_TransportDeadlines(t *testing.T) {
 	}
 	if tr.ResponseHeaderTimeout != llmResponseHeaderTimeout {
 		t.Fatalf("ResponseHeaderTimeout = %v, want %v", tr.ResponseHeaderTimeout, llmResponseHeaderTimeout)
+	}
+}
+
+func TestStream_ResponseHeaderTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond) // never ACK (no response headers) in time
+		fmt.Fprint(w, deltaFrame("late"))
+	}))
+	defer srv.Close()
+
+	// Tiny ResponseHeaderTimeout so the test is fast; proves the deadline reaches stream().
+	client := &openRouterClient{
+		baseURL: srv.URL,
+		http:    &http.Client{Transport: &http.Transport{ResponseHeaderTimeout: 20 * time.Millisecond}},
+	}
+
+	if _, err := client.stream(context.Background(), nil, func(string) {}); err == nil {
+		t.Fatal("want error when upstream stalls before response headers, got nil")
 	}
 }
