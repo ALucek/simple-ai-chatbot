@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ConversationPage from './page';
-import * as messagesHook from '@/lib/use-messages';
+import * as messagesHook from '@/lib/messages-context';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: '5' }) }));
-vi.mock('@/lib/use-messages');
+vi.mock('@/lib/messages-context');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -21,6 +21,7 @@ describe('ConversationPage', () => {
       error: null,
       notFound: false,
       send: vi.fn(),
+      stop: vi.fn(),
       sending: false,
     });
     render(<ConversationPage />);
@@ -35,6 +36,7 @@ describe('ConversationPage', () => {
       error: null,
       notFound: false,
       send: vi.fn(),
+      stop: vi.fn(),
       sending: false,
     });
     render(<ConversationPage />);
@@ -48,6 +50,7 @@ describe('ConversationPage', () => {
       error: null,
       notFound: true,
       send: vi.fn(),
+      stop: vi.fn(),
       sending: false,
     });
     render(<ConversationPage />);
@@ -61,6 +64,7 @@ describe('ConversationPage', () => {
       error: null,
       notFound: false,
       send: vi.fn(),
+      stop: vi.fn(),
       sending: false,
     });
     render(<ConversationPage />);
@@ -83,6 +87,7 @@ describe('ConversationPage', () => {
       error: null,
       notFound: false,
       send: vi.fn(),
+      stop: vi.fn(),
       sending: false,
     });
     render(<ConversationPage />);

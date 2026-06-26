@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useMessages } from '@/lib/use-messages';
+import { useMessages } from '@/lib/messages-context';
 import { MessageList } from '@/components/message-list';
 import { Composer } from '@/components/composer';
 

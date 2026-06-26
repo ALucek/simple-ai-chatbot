@@ -10,6 +10,7 @@ vi.mock('@/components/sidebar', () => ({ Sidebar: () => <div>sidebar</div> }));
 vi.mock('@/lib/conversations-context', () => ({
   ConversationsProvider: ({ children }: { children: React.ReactNode }) =>
     children,
+  useConversationsContext: () => ({ patchConversation: () => {} }),
 }));
 
 function authValue(status: 'loading' | 'authed' | 'anon') {

@@ -1,4 +1,4 @@
-import type { ChatMessage } from '@/lib/use-messages';
+import type { ChatMessage } from '@/lib/messages-context';
 
 export function MessageList({ messages }: { messages: ChatMessage[] }) {
   return (
