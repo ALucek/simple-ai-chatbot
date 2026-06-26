@@ -299,3 +299,22 @@ describe('sendMessage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
+
+it('swallows an AbortError without calling onError', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockRejectedValue(new DOMException('aborted', 'AbortError'));
+  vi.stubGlobal('fetch', fetchMock);
+
+  const onError = vi.fn();
+  const ac = new AbortController();
+  await expect(
+    sendMessage(
+      7,
+      'hi',
+      { onDelta: () => {}, onDone: () => {}, onTitle: () => {}, onError },
+      ac.signal,
+    ),
+  ).resolves.toBeUndefined();
+  expect(onError).not.toHaveBeenCalled();
+});

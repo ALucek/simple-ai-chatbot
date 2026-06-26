@@ -221,6 +221,7 @@ export async function sendMessage(
   id: number,
   content: string,
   handlers: StreamHandlers,
+  signal?: AbortSignal,
 ): Promise<void> {
   const send = () =>
     fetch(`${API_URL}/api/conversations/${id}/messages`, {
@@ -230,45 +231,49 @@ export async function sendMessage(
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       },
       body: JSON.stringify({ content }),
+      signal,
     });
 
-  let res = await send();
-  if (res.status === 401 && hasRefreshToken()) {
-    const token = await refreshAccess();
-    if (token) res = await send();
-  }
-  if (!res.ok || !res.body) {
-    handlers.onError(await errorMessage(res));
-    return;
-  }
+  try {
+    let res = await send();
+    if (res.status === 401 && hasRefreshToken()) {
+      const token = await refreshAccess();
+      if (token) res = await send();
+    }
+    if (!res.ok || !res.body) {
+      handlers.onError(await errorMessage(res));
+      return;
+    }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-  // The server sends `title` after `done`, so we read until the stream
-  // closes rather than stopping on any single event.
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parsed = parseSSE(buffer);
-    buffer = parsed.rest;
-    for (const ev of parsed.events) {
-      const payload = ev.data ? JSON.parse(ev.data) : {};
-      switch (ev.event) {
-        case 'delta':
-          handlers.onDelta(payload.text);
-          break;
-        case 'done':
-          handlers.onDone(payload.message_id);
-          break;
-        case 'title':
-          handlers.onTitle(payload.title);
-          break;
-        case 'error':
-          handlers.onError(payload.error);
-          break;
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parsed = parseSSE(buffer);
+      buffer = parsed.rest;
+      for (const ev of parsed.events) {
+        const payload = ev.data ? JSON.parse(ev.data) : {};
+        switch (ev.event) {
+          case 'delta':
+            handlers.onDelta(payload.text);
+            break;
+          case 'done':
+            handlers.onDone(payload.message_id);
+            break;
+          case 'title':
+            handlers.onTitle(payload.title);
+            break;
+          case 'error':
+            handlers.onError(payload.error);
+            break;
+        }
       }
     }
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return; // user/nav stop, not a failure
+    throw e;
   }
 }
