@@ -1,3 +1,6 @@
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 import type { ChatMessage } from '@/lib/messages-context';
 
 export function MessageList({ messages }: { messages: ChatMessage[] }) {
@@ -16,16 +19,26 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
           }
         >
           <span className="text-subtle mb-1 text-xs uppercase">{m.role}</span>
-          <span
-            className={`max-w-[80%] rounded-[--radius] px-4 py-2 text-sm whitespace-pre-wrap ${
-              m.role === 'user'
-                ? 'bg-accent text-accent-fg'
-                : 'bg-surface-muted text-fg'
-            }`}
-          >
-            {m.content}
-            {m.streaming && '▍'}
-          </span>
+          {m.role === 'assistant' ? (
+            <div className="markdown bg-surface-muted text-fg max-w-[80%] rounded-[--radius] px-4 py-2 text-sm">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeSanitize]}
+                components={{
+                  a: (props) => (
+                    <a {...props} target="_blank" rel="noopener noreferrer" />
+                  ),
+                }}
+              >
+                {m.content}
+              </ReactMarkdown>
+              {m.streaming && '▍'}
+            </div>
+          ) : (
+            <span className="bg-accent text-accent-fg max-w-[80%] rounded-[--radius] px-4 py-2 text-sm whitespace-pre-wrap">
+              {m.content}
+            </span>
+          )}
         </li>
       ))}
     </ul>

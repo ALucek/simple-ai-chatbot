@@ -91,6 +91,7 @@ describe('ConversationPage', () => {
       sending: false,
     });
     render(<ConversationPage />);
-    expect(screen.getByText(/Hel▍/)).toBeInTheDocument();
+    // Markdown renders the content in its own element; the caret is a sibling node.
+    expect(screen.getByText('Hel').parentElement).toHaveTextContent('Hel▍');
   });
 });
