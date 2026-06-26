@@ -58,3 +58,26 @@ func TestStream_ParsesUsage(t *testing.T) {
 		t.Fatalf("want {11 7}, got %+v", usage)
 	}
 }
+
+func TestNewLLMHTTPClient_TransportDeadlines(t *testing.T) {
+	c := newLLMHTTPClient()
+
+	// Client.Timeout must stay zero
+	if c.Timeout != 0 {
+		t.Fatalf("Client.Timeout must be 0 (would cut SSE), got %v", c.Timeout)
+	}
+
+	tr, ok := c.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("Transport is %T, want *http.Transport", c.Transport)
+	}
+	if tr.DialContext == nil {
+		t.Fatal("DialContext not set (dial timeout missing)")
+	}
+	if tr.TLSHandshakeTimeout != llmTLSTimeout {
+		t.Fatalf("TLSHandshakeTimeout = %v, want %v", tr.TLSHandshakeTimeout, llmTLSTimeout)
+	}
+	if tr.ResponseHeaderTimeout != llmResponseHeaderTimeout {
+		t.Fatalf("ResponseHeaderTimeout = %v, want %v", tr.ResponseHeaderTimeout, llmResponseHeaderTimeout)
+	}
+}
