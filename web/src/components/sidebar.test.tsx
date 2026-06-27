@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { Sidebar } from './sidebar';
 import { useConversationsContext } from '@/lib/conversations-context';
 import { useAuth } from '@/lib/auth-context';
+import { ToastProvider } from '@/lib/toast-context';
+
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <ToastProvider>{children}</ToastProvider>
+);
 
 const push = vi.fn();
 vi.mock('next/navigation', () => ({
@@ -41,7 +46,7 @@ describe('Sidebar', () => {
       remove,
       patchConversation: vi.fn(),
     });
-    render(<Sidebar />);
+    render(<Sidebar />, { wrapper });
     expect(screen.getByText('One')).toBeInTheDocument();
     expect(screen.getByText('Two')).toBeInTheDocument();
   });
@@ -62,7 +67,7 @@ describe('Sidebar', () => {
       remove,
       patchConversation: vi.fn(),
     });
-    render(<Sidebar />);
+    render(<Sidebar />, { wrapper });
     await userEvent.click(screen.getByText('New conversation'));
     expect(create).toHaveBeenCalled();
     expect(push).toHaveBeenCalledWith('/c/7');
@@ -78,8 +83,8 @@ describe('Sidebar', () => {
       remove,
       patchConversation: vi.fn(),
     });
-    render(<Sidebar />);
-    const { container } = render(<Sidebar />);
+    render(<Sidebar />, { wrapper });
+    const { container } = render(<Sidebar />, { wrapper });
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
       0,
     );

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { ConversationItem } from './conversation-item';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/lib/toast-context';
 
 export function Sidebar() {
   const router = useRouter();
@@ -13,9 +14,15 @@ export function Sidebar() {
   const { conversations, loading, error, create, rename, remove } =
     useConversationsContext();
 
+  const { toast } = useToast();
+
   async function onNew() {
-    const convo = await create();
-    router.push(`/c/${convo.id}`);
+    try {
+      const convo = await create();
+      router.push(`/c/${convo.id}`);
+    } catch {
+      toast('Could not create conversation');
+    }
   }
 
   return (
