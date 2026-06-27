@@ -11,7 +11,7 @@ export function Wordmark() {
     <pre
       aria-label="Adam Łucek"
       style={{ fontFamily: '"Courier New", monospace' }}
-      className="text-fg-strong overflow-x-auto text-center text-[17px] leading-[1.2]"
+      className="text-fg-strong overflow-x-auto text-center text-[clamp(7px,2.5vw,17px)] leading-[1.2]"
     >
       {ART}
     </pre>
