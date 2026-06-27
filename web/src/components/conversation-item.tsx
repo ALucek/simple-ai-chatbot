@@ -74,12 +74,12 @@ export function ConversationItem({ conversation, rename, remove }: Props) {
 
   return (
     <div
-      className={`group hover:bg-hover flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] px-2 py-1.5 ${
+      className={`group hover:bg-hover flex h-8 items-center gap-1.5 rounded-[var(--radius)] px-2 ${
         isOpen ? 'bg-hover' : ''
       }`}
     >
       <span
-        className={`w-2.5 shrink-0 ${isOpen ? 'text-fg-strong' : 'text-subtle'}`}
+        className={`w-2.5 shrink-0 text-sm ${isOpen ? 'text-fg-strong' : 'text-subtle'}`}
       >
         {isOpen ? '>' : ''}
       </span>
