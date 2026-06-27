@@ -13,6 +13,18 @@ import (
 	"time"
 )
 
+const serverIdleTimeout = 120 * time.Second
+
+// WriteTimeout is left unset on purpose cuz streaming SSE response.
+func newServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       serverIdleTimeout,
+	}
+}
+
 func main() {
 	cfg, err := LoadConfig()
 	if err != nil {
@@ -39,11 +51,8 @@ func main() {
 
 	mux := newMux(check, auth, chat)
 
-	server := &http.Server{
-		Addr:              ":" + cfg.Port,
-		Handler:           withRequestID(withLogging(withSecurityHeaders(withCORS(cfg.AllowedOrigin, withMaxBody(mux))))),
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	handler := withRequestID(withLogging(withSecurityHeaders(withCORS(cfg.AllowedOrigin, withMaxBody(mux)))))
+	server := newServer(":"+cfg.Port, handler)
 
 	go func() {
 		slog.Info("listening", "port", cfg.Port)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestReadyHandler_OK(t *testing.T) {
@@ -51,5 +52,18 @@ func TestSecurityHeaders(t *testing.T) {
 		if got := rec.Header().Get(k); got != v {
 			t.Errorf("%s: want %q, got %q", k, v, got)
 		}
+	}
+}
+
+func TestNewServer_Timeouts(t *testing.T) {
+	srv := newServer(":8080", nil)
+	if srv.IdleTimeout != 120*time.Second {
+		t.Errorf("IdleTimeout: want 120s, got %v", srv.IdleTimeout)
+	}
+	if srv.ReadHeaderTimeout != 10*time.Second {
+		t.Errorf("ReadHeaderTimeout: want 10s, got %v", srv.ReadHeaderTimeout)
+	}
+	if srv.WriteTimeout != 0 {
+		t.Errorf("WriteTimeout: want 0 (off for SSE), got %v", srv.WriteTimeout)
 	}
 }
