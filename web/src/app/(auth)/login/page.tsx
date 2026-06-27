@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Wordmark } from '@/components/wordmark';
 
 export default function LoginPage() {
   const { status, login } = useAuth();
@@ -22,6 +23,14 @@ export default function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (!email.trim() || !password) {
+      setError(!email.trim() ? 'Email is required' : 'Password is required');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Enter a valid email');
+      return;
+    }
     try {
       await login(email, password);
       router.replace('/');
@@ -32,36 +41,37 @@ export default function LoginPage() {
 
   return (
     <main className="bg-bg flex min-h-screen items-center justify-center p-6">
-      <div className="border-border bg-surface w-full max-w-sm rounded-[--radius] border p-8">
-        <h1 className="text-fg mb-6 text-2xl font-semibold">Log in</h1>
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && (
-            <p role="alert" className="text-danger text-sm">
-              {error}
-            </p>
-          )}
-          <Button type="submit">Log in</Button>
-        </form>
-        <p className="text-muted mt-4 text-sm">
-          No account?{' '}
-          <Link href="/signup" className="text-fg underline">
-            Sign up
-          </Link>
-        </p>
+      <div className="flex flex-col items-center gap-6">
+        <Wordmark />
+        <div className="border-border bg-surface w-full max-w-sm rounded-[--radius] border p-8">
+          <h1 className="text-fg-strong mb-6 text-xl">Log in</h1>
+          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            {error && (
+              <p role="alert" className="text-danger text-sm">
+                {error}
+              </p>
+            )}
+            <Button type="submit">Log in</Button>
+          </form>
+          <p className="text-muted mt-4 text-sm">
+            No account?{' '}
+            <Link href="/signup" className="text-fg-strong underline">
+              Sign up
+            </Link>
+          </p>
+        </div>
       </div>
     </main>
   );
