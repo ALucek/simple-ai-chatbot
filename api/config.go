@@ -60,6 +60,14 @@ func LoadConfig() (Config, error) {
 			return Config{}, fmt.Errorf("missing required env var: %s", r.name)
 		}
 	}
+
+	// JWT_SECRET signs every session token. Require a meaningful key length so a
+	// weak or truncated value (e.g. an empty/misconfigured secret injection)
+	// can't slip through and leave tokens forgeable — fail loud at startup.
+	if len(cfg.JWTSecret) < 32 {
+		return Config{}, fmt.Errorf("JWT_SECRET must be at least 32 characters, got %d", len(cfg.JWTSecret))
+	}
+
 	return cfg, nil
 }
 

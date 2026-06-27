@@ -77,6 +77,14 @@ func TestLoadConfig_LogLevelDefault(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_RejectsShortJWTSecret(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("JWT_SECRET", "too-short")
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("expected an error for a short JWT_SECRET, got nil")
+	}
+}
+
 func TestGetenvInt(t *testing.T) {
 	t.Setenv("X_BUDGET", "1234")
 	if got := getenvInt("X_BUDGET", 8192); got != 1234 {
