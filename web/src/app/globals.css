@@ -203,3 +203,37 @@
     opacity: 0;
   }
 }
+
+/* usage meter — donut + centered percent in the sidebar footer */
+.usage {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.usage-donut {
+  --pct: 0;
+  --ring: var(--color-fg-strong);
+  --track: var(--color-border);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* clockwise from 12 o'clock; center punched out into a ring */
+  background: conic-gradient(var(--ring) calc(var(--pct) * 1%), var(--track) 0);
+  -webkit-mask: radial-gradient(circle, transparent 56%, #000 57%);
+  mask: radial-gradient(circle, transparent 56%, #000 57%);
+}
+.usage-donut.warn {
+  --ring: var(--color-danger);
+}
+.usage-pct {
+  font-size: 12px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  /* fixed slot keeps the donut anchored; number centered within it */
+  width: 4ch;
+  text-align: center;
+}
+.usage-pct.warn {
+  color: var(--color-danger);
+}
