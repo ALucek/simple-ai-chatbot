@@ -30,8 +30,8 @@ export function Composer({
   }
 
   return (
-    <div className="border-border bg-surface border-t p-3">
-      <div className="mx-auto flex max-w-2xl items-end gap-2">
+    <div className="border-border bg-surface flex h-[var(--bottombar-h)] items-center border-t px-3">
+      <div className="mx-auto flex w-full max-w-2xl items-center gap-2">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

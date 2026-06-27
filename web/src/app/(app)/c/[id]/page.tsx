@@ -31,7 +31,7 @@ export default function ConversationPage() {
         <div ref={contentRef}>
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-              <p className="text-fg text-sm font-medium">No messages yet</p>
+              <p className="text-fg-strong text-sm">No messages yet</p>
               <p className="text-muted text-sm">
                 Send a message below to get started.
               </p>
