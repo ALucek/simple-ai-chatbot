@@ -53,12 +53,41 @@
   margin-bottom: 0;
 }
 .markdown p {
-  margin: 0.5rem 0;
+  margin: 10px 0;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  color: var(--color-fg-strong);
+  font-weight: 400;
+  line-height: 1.35;
+  text-shadow: 0.4px 0 0 currentColor;
+  margin: 18px 0 8px;
+}
+.markdown h1 {
+  font-size: 19px;
+}
+.markdown h2 {
+  font-size: 17px;
+}
+.markdown h3 {
+  font-size: 15px;
+}
+/* lucek.ai heading underline accent */
+.markdown h2::after,
+.markdown h3::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 2px;
+  background: var(--color-border);
+  margin-top: 5px;
+  border-radius: 2px;
 }
 .markdown ul,
 .markdown ol {
-  margin: 0.5rem 0;
-  padding-left: 1.25rem;
+  margin: 10px 0;
+  padding-left: 22px;
 }
 .markdown ul {
   list-style: disc;
@@ -66,47 +95,61 @@
 .markdown ol {
   list-style: decimal;
 }
+.markdown li {
+  margin: 5px 0;
+}
 .markdown a {
+  color: var(--color-fg);
   text-decoration: underline;
 }
-.markdown h1,
-.markdown h2,
-.markdown h3 {
-  font-weight: 600;
-  margin: 0.75rem 0 0.25rem;
+.markdown a:hover {
+  color: var(--color-muted);
 }
 .markdown code {
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
-  border-radius: 0.25rem;
-  padding: 0.05em 0.3em;
-  font-size: 0.85em;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.92em;
 }
 .markdown pre {
-  background: var(--color-bg);
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 0.75rem;
-  margin: 0.5rem 0;
+  padding: 12px 14px;
+  margin: 12px 0;
   overflow-x: auto;
+  line-height: 1.5;
 }
 .markdown pre code {
   background: none;
   border: 0;
   padding: 0;
+  font-size: 13px;
 }
 .markdown blockquote {
-  border-left: 3px solid var(--color-border);
-  padding-left: 0.75rem;
+  margin: 12px 0;
+  padding: 8px 16px;
+  background: var(--color-surface-muted);
+  border-left: 3px solid var(--color-muted);
+  border-radius: 0 var(--radius) var(--radius) 0;
   color: var(--color-muted);
-  margin: 0.5rem 0;
+  font-style: italic;
 }
 .markdown table {
   border-collapse: collapse;
-  margin: 0.5rem 0;
+  margin: 12px 0;
+  font-size: 13px;
+}
+.markdown th {
+  background: var(--color-hover);
+  text-align: left;
+  font-weight: 400;
+  color: var(--color-fg-strong);
+  text-shadow: 0.4px 0 0 currentColor;
 }
 .markdown th,
 .markdown td {
   border: 1px solid var(--color-border);
-  padding: 0.25rem 0.5rem;
+  padding: 6px 10px;
 }
