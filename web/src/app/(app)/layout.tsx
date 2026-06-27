@@ -10,12 +10,14 @@ import { UsageProvider } from '@/lib/usage-context';
 import { MessagesProvider } from '@/lib/messages-context';
 import { useSidebarCollapsed } from '@/lib/use-sidebar-collapsed';
 import { useMobileDrawer } from '@/lib/use-mobile-drawer';
+import { useViewportHeight } from '@/lib/use-viewport-height';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { status } = useAuth();
   const router = useRouter();
   const { collapsed, toggle } = useSidebarCollapsed();
   const { open, toggle: toggleMobile, close: closeMobile } = useMobileDrawer();
+  useViewportHeight();
 
   useEffect(() => {
     if (status === 'anon') router.replace('/login');
@@ -26,7 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <ConversationsProvider>
       <UsageProvider>
         <MessagesProvider>
-          <div className="bg-bg relative flex h-screen">
+          <div
+            data-testid="app-shell"
+            className="bg-bg relative flex h-[var(--app-height,100dvh)]"
+          >
             {/* Desktop toggle: collapses the push column (md and up). */}
             <Button
               variant="ghost"

@@ -126,4 +126,15 @@ describe('AppLayout guard', () => {
     expect(screen.getByLabelText('Toggle sidebar')).toBeInTheDocument();
     expect(screen.getByLabelText('Toggle menu')).toBeInTheDocument();
   });
+
+  it('sizes the shell to the dynamic app-height var', () => {
+    vi.mocked(useAuth).mockReturnValue(authValue('authed'));
+    render(
+      <AppLayout>
+        <div>secret</div>
+      </AppLayout>,
+    );
+    const shell = screen.getByTestId('app-shell');
+    expect(shell.className).toContain('h-[var(--app-height,100dvh)]');
+  });
 });
