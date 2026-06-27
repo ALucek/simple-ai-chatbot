@@ -6,40 +6,50 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
   return (
     <ul
       aria-live="polite"
-      className="mx-auto flex max-w-2xl flex-col gap-4 p-6"
+      className="mx-auto flex max-w-2xl flex-col gap-5 px-5 py-7"
     >
-      {messages.map((m) => (
-        <li
-          key={m.id}
-          className={
-            m.role === 'user'
-              ? 'flex flex-col items-end'
-              : 'flex flex-col items-start'
-          }
-        >
-          <span className="text-subtle mb-1 text-xs uppercase">{m.role}</span>
-          {m.role === 'assistant' ? (
-            <div className="markdown bg-surface-muted text-fg max-w-[80%] rounded-[--radius] px-4 py-2 text-sm">
-              <ReactMarkdown
-                remarkPlugins={remarkPlugins}
-                rehypePlugins={rehypePlugins}
-                components={{
-                  a: (props) => (
-                    <a {...props} target="_blank" rel="noopener noreferrer" />
-                  ),
-                }}
-              >
-                {m.content}
-              </ReactMarkdown>
-              {m.streaming && '▍'}
+      {messages.map((m) => {
+        const isUser = m.role === 'user';
+        return (
+          <li
+            key={m.id}
+            className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}
+          >
+            <div
+              className={`flex items-center gap-1.5 ${isUser ? 'flex-row-reverse' : ''}`}
+            >
+              <span className="text-subtle">&gt;</span>
+              <span className="text-subtle text-[11px] tracking-[0.12em] uppercase">
+                {isUser ? 'you' : 'assistant'}
+              </span>
             </div>
-          ) : (
-            <span className="bg-accent text-accent-fg max-w-[80%] rounded-[--radius] px-4 py-2 text-sm whitespace-pre-wrap">
-              {m.content}
-            </span>
-          )}
-        </li>
-      ))}
+            {isUser ? (
+              <span className="border-border bg-surface-muted text-fg max-w-[80%] rounded-[--radius] border px-3 py-2 text-sm whitespace-pre-wrap">
+                {m.content}
+              </span>
+            ) : (
+              <div className="markdown text-fg max-w-full text-sm">
+                <ReactMarkdown
+                  remarkPlugins={remarkPlugins}
+                  rehypePlugins={rehypePlugins}
+                  components={{
+                    a: (props) => (
+                      <a {...props} target="_blank" rel="noopener noreferrer" />
+                    ),
+                  }}
+                >
+                  {m.content}
+                </ReactMarkdown>
+                {m.streaming && (
+                  <span className="caret-blink" aria-hidden="true">
+                    ▍
+                  </span>
+                )}
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

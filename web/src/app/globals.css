@@ -193,3 +193,13 @@
 .markdown .hljs-punctuation {
   color: #9a6e3a;
 }
+
+/* streaming caret */
+.caret-blink {
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
