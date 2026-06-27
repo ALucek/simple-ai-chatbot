@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +32,17 @@ const userIDKey ctxKey = "userID"
 const accessTokenTTL = 15 * time.Minute
 const minPasswordLen = 8    // characters
 const maxPasswordBytes = 72 // bcrypt ignores bytes past 72; reject rather than truncate
+
+// lookupMX is a package-level seam so tests can stub DNS.
+var lookupMX = net.DefaultResolver.LookupMX
+
+var (
+	errEmailInvalid       = errors.New("invalid email")
+	errEmailUndeliverable = errors.New("email domain can't receive mail")
+	errEmailUnverifiable  = errors.New("could not verify email")
+)
+
+const mxLookupTimeout = 3 * time.Second
 
 // hashPassword returns a bcrypt hash of the plaintext password.
 func hashPassword(plain string) (string, error) {
@@ -136,4 +150,27 @@ func newFamilyID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+func checkEmailDeliverable(ctx context.Context, email string) error {
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return errEmailInvalid
+	}
+	at := strings.LastIndex(addr.Address, "@")
+	if at < 0 || at == len(addr.Address)-1 {
+		return errEmailInvalid
+	}
+	domain := addr.Address[at+1:]
+
+	ctx, cancel := context.WithTimeout(ctx, mxLookupTimeout)
+	defer cancel()
+	records, err := lookupMX(ctx, domain)
+	if err != nil {
+		return errEmailUnverifiable
+	}
+	if len(records) == 0 {
+		return errEmailUndeliverable
+	}
+	return nil
 }
