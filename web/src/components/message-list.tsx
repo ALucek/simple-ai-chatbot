@@ -6,7 +6,7 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
   return (
     <ul
       aria-live="polite"
-      className="mx-auto flex max-w-2xl flex-col gap-5 px-5 py-7"
+      className="mx-auto flex max-w-2xl flex-col gap-5 px-4 py-5 sm:px-5 sm:py-7"
     >
       {messages.map((m) => {
         const isUser = m.role === 'user';
