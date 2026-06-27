@@ -83,6 +83,11 @@ To restyle, edit the tokens (and, for shape changes, the primitives) — not eve
   bytes. Deltas append to an optimistic assistant bubble, `done` swaps in the real message id,
   and `title` updates the sidebar live. Stopping aborts the fetch and drops the partial reply
   (the user message stays); an `AbortError` is swallowed, never shown as an error.
+- **Usage meter.** The sidebar footer shows daily token-budget consumption as a donut +
+  percentage. `UsageProvider` (`lib/usage-context.tsx`) fetches `GET /api/usage`
+  (`{used, budget}`) on mount and again whenever a reply finishes streaming; `UsageMeter`
+  renders the rounded percent (clamped to 100, red at ≥90%) and hides itself when usage
+  can't be loaded.
 - **Robustness.**
   - **Session expiry** — when a mid-session refresh fails, `api.ts` notifies the auth context
     (`setOnUnauthorized`), which drops to `anon` so the shell redirects to `/login` instead of
@@ -135,6 +140,7 @@ web/src/
     conversation-item.tsx     # one sidebar row (inline rename + delete confirm)
     message-list.tsx          # message bubbles (sanitized Markdown) + streaming caret
     composer.tsx              # message input box + Stop button
+    usage-meter.tsx           # daily token-budget donut + percent in the sidebar footer
   lib/
     cn.ts                     # clsx + tailwind-merge class-merge helper
     api.ts                    # fetch client: auth, CRUD, SSE streaming (parseSSE/sendMessage), setOnUnauthorized
@@ -142,6 +148,7 @@ web/src/
     auth-context.tsx          # session state + login / signup / logout
     conversations-context.tsx # shared conversation list + patchConversation
     messages-context.tsx      # app-level message store; survives navigation; send / stop / stream
+    usage-context.tsx         # fetches GET /api/usage; refreshes after each reply
     toast-context.tsx         # ToastProvider + useToast (auto-dismiss notifications)
     csp.ts                    # builds the page Content-Security-Policy (used by next.config.ts)
 ```
