@@ -72,6 +72,11 @@ To restyle, edit the tokens (and, for shape changes, the primitives) — not eve
 - **Routing.** Route groups `(auth)` and `(app)` don't appear in the URL. `(app)/layout.tsx`
   is the auth guard plus the two-pane shell (sidebar │ main); each conversation is its own
   route at `/c/[id]`.
+- **Collapsible sidebar.** A single `☰` toggle pinned at the shell's top-left collapses /
+  expands the left sidebar (`useSidebarCollapsed`, persisted to `localStorage`). Only an
+  outer wrapper animates its width; the sidebar stays a fixed-width inner panel and is
+  clipped, so it never reflows mid-slide, and the centered conversation column recenters
+  in the freed space.
 - **Data.** Hand-built hooks and contexts instead of a data library. `ConversationsProvider`
   owns the sidebar list; `MessagesProvider` (`lib/messages-context.tsx`) is an app-level
   per-conversation message store, and `useMessages(id)` reads it. Because the store sits
@@ -149,6 +154,7 @@ web/src/
     conversations-context.tsx # shared conversation list + patchConversation
     messages-context.tsx      # app-level message store; survives navigation; send / stop / stream
     usage-context.tsx         # fetches GET /api/usage; refreshes after each reply
+    use-sidebar-collapsed.ts  # persisted left-sidebar collapse state (localStorage)
     toast-context.tsx         # ToastProvider + useToast (auto-dismiss notifications)
     csp.ts                    # builds the page Content-Security-Policy (used by next.config.ts)
 ```
