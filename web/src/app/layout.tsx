@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Share_Tech_Mono } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
@@ -15,6 +15,10 @@ const mono = Share_Tech_Mono({
 export const metadata: Metadata = {
   title: 'Adam Łucek',
   description: 'A minimal multi-user streaming chatbot.',
+};
+
+export const viewport: Viewport = {
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({
