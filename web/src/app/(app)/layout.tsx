@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/sidebar';
 import { ConversationsProvider } from '@/lib/conversations-context';
+import { UsageProvider } from '@/lib/usage-context';
 import { MessagesProvider } from '@/lib/messages-context';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -18,12 +19,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (status !== 'authed') return null;
   return (
     <ConversationsProvider>
-      <MessagesProvider>
-        <div className="bg-bg flex h-screen">
-          <Sidebar />
-          <main className="flex-1 overflow-hidden">{children}</main>
-        </div>
-      </MessagesProvider>
+      <UsageProvider>
+        <MessagesProvider>
+          <div className="bg-bg flex h-screen">
+            <Sidebar />
+            <main className="flex-1 overflow-hidden">{children}</main>
+          </div>
+        </MessagesProvider>
+      </UsageProvider>
     </ConversationsProvider>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { type Message, getMessages, sendMessage, ApiError } from './api';
 import { useConversationsContext } from './conversations-context';
+import { useUsage } from './usage-context';
 
 export type ChatMessage = Message & { streaming?: boolean };
 
@@ -48,6 +49,12 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const patchConvRef = useRef(patchConversation);
   useEffect(() => {
     patchConvRef.current = patchConversation;
+  });
+
+  const { refresh: refreshUsage } = useUsage();
+  const refreshUsageRef = useRef(refreshUsage);
+  useEffect(() => {
+    refreshUsageRef.current = refreshUsage;
   });
   const controllers = useRef<Record<number, AbortController>>({});
   const loaded = useRef<Set<number>>(new Set());
@@ -132,6 +139,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
               ),
             }));
             delete controllers.current[id];
+            refreshUsageRef.current();
           },
           onTitle: (title) => patchConvRef.current(id, { title }),
           onError: (message) => {

@@ -24,6 +24,11 @@ vi.mock('./conversations-context', () => ({
   useConversationsContext: () => ({ patchConversation }),
 }));
 
+const { refreshUsage } = vi.hoisted(() => ({ refreshUsage: vi.fn() }));
+vi.mock('./usage-context', () => ({
+  useUsage: () => ({ used: null, budget: null, refresh: refreshUsage }),
+}));
+
 function wrapper({ children }: { children: React.ReactNode }) {
   return <MessagesProvider>{children}</MessagesProvider>;
 }
@@ -34,6 +39,7 @@ beforeEach(() => {
   vi.mocked(api.getMessages).mockReset();
   vi.mocked(api.sendMessage).mockReset();
   patchConversation.mockReset();
+  refreshUsage.mockReset();
 });
 
 describe('useMessages (store)', () => {
@@ -87,6 +93,24 @@ describe('useMessages (store)', () => {
       },
     ]);
     expect(result.current.sending).toBe(false);
+  });
+
+  it('refreshes usage when the reply completes', async () => {
+    vi.mocked(api.getMessages).mockResolvedValue([]);
+    vi.mocked(api.sendMessage).mockImplementation(
+      async (_id, _content, h: StreamHandlers) => {
+        h.onDone(5);
+      },
+    );
+    const { result } = renderHook(({ id }) => useMessages(id), {
+      initialProps: { id: 1 },
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => {
+      await result.current.send('hi');
+    });
+    expect(refreshUsage).toHaveBeenCalled();
   });
 
   it('send forwards a title event to patchConversation', async () => {
