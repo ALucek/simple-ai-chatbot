@@ -74,35 +74,47 @@ export function ConversationItem({ conversation, rename, remove }: Props) {
 
   return (
     <div
-      className={`group hover:bg-surface-muted flex items-center gap-1 rounded-[--radius] px-2 py-1 ${
-        isOpen ? 'bg-surface-muted' : ''
+      className={`group hover:bg-hover flex min-h-8 items-center gap-1.5 rounded-[--radius] px-2 py-1.5 ${
+        isOpen ? 'bg-hover' : ''
       }`}
     >
+      <span
+        className={`w-2.5 shrink-0 ${isOpen ? 'text-fg-strong' : 'text-subtle'}`}
+      >
+        {isOpen ? '>' : ''}
+      </span>
       <Link
         href={`/c/${conversation.id}`}
-        className={`flex-1 truncate text-sm ${isOpen ? 'text-fg font-semibold' : 'text-muted'}`}
+        className={`flex-1 truncate text-sm ${isOpen ? 'text-fg-strong' : 'text-muted'}`}
       >
         {conversation.title || 'New conversation'}
       </Link>
       {confirming ? (
         <span className="text-muted flex items-center gap-1 text-xs">
           Delete?
-          <Button variant="ghost" size="sm" onClick={confirmDelete}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5"
+            onClick={confirmDelete}
+          >
             yes
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            className="h-5"
             onClick={() => setConfirming(false)}
           >
             no
           </Button>
         </span>
       ) : (
-        <>
+        <span className="hidden items-center gap-1 group-hover:flex">
           <Button
             variant="ghost"
             size="sm"
+            className="h-5"
             onClick={() => setEditing(true)}
             aria-label="Rename"
           >
@@ -111,12 +123,13 @@ export function ConversationItem({ conversation, rename, remove }: Props) {
           <Button
             variant="ghost"
             size="sm"
+            className="h-5"
             onClick={() => setConfirming(true)}
             aria-label="Delete"
           >
             Delete
           </Button>
-        </>
+        </span>
       )}
     </div>
   );
