@@ -8,6 +8,8 @@ conversation sidebar, and assistant replies streamed in token-by-token over SSE.
 - **Next.js** 16 (App Router, TypeScript strict), **React** 19
 - **Tailwind CSS** v4 with a hand-built design system — semantic `@theme` tokens + small
   primitives (`Button`/`Input`/`Textarea`); no component kit. Black-and-white UI
+- **Rendering/behavior utilities** (not a component kit): `react-markdown` + `remark-gfm` +
+  `rehype-sanitize` (safe Markdown), `use-stick-to-bottom` (scroll anchoring)
 - **pnpm** package manager
 - **Tests**: Vitest + React Testing Library (`@testing-library/user-event`, `renderHook`)
 
@@ -62,11 +64,26 @@ To restyle, edit the tokens (and, for shape changes, the primitives) — not eve
   is the auth guard plus the two-pane shell (sidebar │ main); each conversation is its own
   route at `/c/[id]`.
 - **Data.** Hand-built hooks and contexts instead of a data library. `ConversationsProvider`
-  owns the sidebar list; `useMessages` owns one conversation's messages and the send/stream
-  lifecycle.
+  owns the sidebar list; `MessagesProvider` (`lib/messages-context.tsx`) is an app-level
+  per-conversation message store, and `useMessages(id)` reads it. Because the store sits
+  **above** the pages, a stream keeps running when you navigate to another conversation and
+  rehydrates when you return; only the **Stop** button aborts it. (In-memory, so a hard
+  browser refresh starts fresh — resuming across a refresh would need server-side support.)
 - **Streaming.** `api.ts`'s `sendMessage()` POSTs the message and consumes the SSE response
-  with `fetch` + `getReader()`; `parseSSE()` frames the bytes. Deltas append to an optimistic
-  assistant bubble, `done` swaps in the real message id, and `title` updates the sidebar live.
+  with `fetch` + `getReader()` (cancellable via an `AbortSignal`); `parseSSE()` frames the
+  bytes. Deltas append to an optimistic assistant bubble, `done` swaps in the real message id,
+  and `title` updates the sidebar live. Stopping aborts the fetch and drops the partial reply
+  (the user message stays); an `AbortError` is swallowed, never shown as an error.
+- **Robustness.**
+  - **Session expiry** — when a mid-session refresh fails, `api.ts` notifies the auth context
+    (`setOnUnauthorized`), which drops to `anon` so the shell redirects to `/login` instead of
+    showing an inline error.
+  - **Scroll anchoring** — `use-stick-to-bottom` keeps the view pinned to the latest token
+    while streaming but releases the moment you scroll up to read.
+  - **Markdown** — assistant replies render as Markdown via `react-markdown` (+ `remark-gfm`),
+    sanitized by `rehype-sanitize` with raw HTML disabled; user messages stay plain text.
+  - **Page CSP** — a pragmatic `Content-Security-Policy` (built in `lib/csp.ts`, applied in
+    `next.config.ts`) is sent on every response as defense-in-depth.
 
 ## Tests
 
@@ -91,12 +108,13 @@ web/src/
     ui/                       # presentational primitives: Button, Input, Textarea
     sidebar.tsx               # conversation list; new / rename / delete
     conversation-item.tsx     # one sidebar row (inline rename + delete confirm)
-    message-list.tsx          # message bubbles + streaming caret
-    composer.tsx              # message input box
+    message-list.tsx          # message bubbles (sanitized Markdown) + streaming caret
+    composer.tsx              # message input box + Stop button
   lib/
     cn.ts                     # clsx + tailwind-merge class-merge helper
-    api.ts                    # fetch client: auth, CRUD, SSE streaming (parseSSE/sendMessage)
+    api.ts                    # fetch client: auth, CRUD, SSE streaming (parseSSE/sendMessage), setOnUnauthorized
     auth-context.tsx          # session state + login / signup / logout
     conversations-context.tsx # shared conversation list + patchConversation
-    use-messages.ts           # one conversation's messages + send/stream
+    messages-context.tsx      # app-level message store; survives navigation; send / stop / stream
+    csp.ts                    # builds the page Content-Security-Policy (used by next.config.ts)
 ```
