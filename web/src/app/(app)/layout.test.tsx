@@ -99,20 +99,21 @@ describe('AppLayout guard', () => {
       </AppLayout>,
     );
     const wrapper = screen.getByText('sidebar').parentElement as HTMLElement;
+    const backdrop = screen.getByTestId('backdrop');
 
-    // Closed by default.
+    // Closed by default: drawer off-screen, backdrop faded out.
     expect(wrapper.className).toContain('-translate-x-full');
-    expect(screen.queryByTestId('backdrop')).toBeNull();
+    expect(backdrop.className).toContain('opacity-0');
 
     // Mobile toggle opens it.
     await userEvent.click(screen.getByLabelText('Toggle menu'));
     expect(wrapper.className).not.toContain('-translate-x-full');
-    expect(screen.getByTestId('backdrop')).toBeInTheDocument();
+    expect(backdrop.className).toContain('opacity-100');
 
     // Backdrop tap closes it.
-    await userEvent.click(screen.getByTestId('backdrop'));
+    await userEvent.click(backdrop);
     expect(wrapper.className).toContain('-translate-x-full');
-    expect(screen.queryByTestId('backdrop')).toBeNull();
+    expect(backdrop.className).toContain('opacity-0');
   });
 
   it('keeps desktop and mobile toggles as separate controls', () => {

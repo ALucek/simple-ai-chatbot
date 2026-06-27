@@ -49,15 +49,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             >
               ☰
             </Button>
-            {/* Backdrop: mobile only, only while the drawer is open. */}
-            {open && (
-              <div
-                data-testid="backdrop"
-                onClick={closeMobile}
-                aria-hidden="true"
-                className="fixed inset-0 z-30 bg-black/50 md:hidden"
-              />
-            )}
+            {/* Backdrop: mobile only; fades in/out with the drawer. */}
+            <div
+              data-testid="backdrop"
+              onClick={closeMobile}
+              aria-hidden={!open}
+              className={`fixed inset-0 z-30 bg-black/40 transition-opacity duration-200 md:hidden ${
+                open ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            />
             {/* Sidebar: fixed overlay on mobile, push column at md+. */}
             <div
               className={`fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-200 md:static md:z-auto md:translate-x-0 md:overflow-hidden md:transition-[width] ${
