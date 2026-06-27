@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { ConversationItem } from './conversation-item';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from './ui/skeleton';
+import { UsageMeter } from './usage-meter';
 import { useToast } from '@/lib/toast-context';
 
 export function Sidebar() {
@@ -54,16 +55,19 @@ export function Sidebar() {
           ))}
       </nav>
 
-      <div className="border-border flex h-[var(--bottombar-h)] flex-col justify-center border-t px-3 text-sm">
-        <p className="text-muted truncate">{user?.email}</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => logout()}
-          className="mt-1 self-start px-0"
-        >
-          Log out
-        </Button>
+      <div className="border-border flex h-[var(--bottombar-h)] items-center gap-2 border-t px-3 text-sm">
+        <div className="flex min-w-0 flex-1 flex-col justify-center">
+          <p className="text-muted truncate">{user?.email}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logout()}
+            className="mt-1 self-start px-0"
+          >
+            Log out
+          </Button>
+        </div>
+        <UsageMeter />
       </div>
     </aside>
   );

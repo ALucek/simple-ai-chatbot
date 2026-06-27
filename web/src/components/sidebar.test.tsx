@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Sidebar } from './sidebar';
 import { useConversationsContext } from '@/lib/conversations-context';
 import { useAuth } from '@/lib/auth-context';
+import { useUsage } from '@/lib/usage-context';
 import { ToastProvider } from '@/lib/toast-context';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -17,6 +18,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/lib/conversations-context');
 vi.mock('@/lib/auth-context');
+vi.mock('@/lib/usage-context');
 
 const rename = vi.fn();
 const remove = vi.fn();
@@ -30,6 +32,11 @@ beforeEach(() => {
     signup: vi.fn(),
     logout: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>);
+  vi.mocked(useUsage).mockReturnValue({
+    used: null,
+    budget: null,
+    refresh: vi.fn(),
+  });
 });
 
 describe('Sidebar', () => {
