@@ -79,6 +79,10 @@ describe('Sidebar', () => {
       patchConversation: vi.fn(),
     });
     render(<Sidebar />);
-    expect(screen.getByText('Loading…')).toBeInTheDocument();
+    const { container } = render(<Sidebar />);
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });
 });

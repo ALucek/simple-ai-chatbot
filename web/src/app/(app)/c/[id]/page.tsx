@@ -5,6 +5,7 @@ import { useStickToBottom } from 'use-stick-to-bottom';
 import { useMessages } from '@/lib/messages-context';
 import { MessageList } from '@/components/message-list';
 import { Composer } from '@/components/composer';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ConversationPage() {
   const params = useParams();
@@ -13,7 +14,14 @@ export default function ConversationPage() {
     useMessages(id);
   const { scrollRef, contentRef } = useStickToBottom();
 
-  if (loading) return <p className="text-muted p-6 text-sm">Loading…</p>;
+  if (loading)
+    return (
+      <div className="space-y-4 p-6">
+        {[60, 40, 75].map((w, i) => (
+          <Skeleton key={i} className="h-12" style={{ width: `${w}%` }} />
+        ))}
+      </div>
+    );
   if (notFound)
     return <p className="text-muted p-6 text-sm">Conversation not found</p>;
 

@@ -5,6 +5,7 @@ import { useConversationsContext } from '@/lib/conversations-context';
 import { useAuth } from '@/lib/auth-context';
 import { ConversationItem } from './conversation-item';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from './ui/skeleton';
 
 export function Sidebar() {
   const router = useRouter();
@@ -26,7 +27,13 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto p-1">
-        {loading && <p className="text-muted p-2 text-sm">Loading…</p>}
+        {loading && (
+          <div className="space-y-1 p-1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-7 w-full" />
+            ))}
+          </div>
+        )}
         {error && <p className="text-danger p-2 text-sm">{error}</p>}
         {!loading &&
           !error &&
