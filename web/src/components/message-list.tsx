@@ -24,7 +24,7 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
               </span>
             </div>
             {isUser ? (
-              <span className="border-border bg-surface-muted text-fg max-w-[80%] rounded-[--radius] border px-3 py-2 text-sm whitespace-pre-wrap">
+              <span className="border-border bg-surface-muted text-fg max-w-[80%] rounded-[var(--radius)] border px-3 py-2 text-sm whitespace-pre-wrap">
                 {m.content}
               </span>
             ) : (

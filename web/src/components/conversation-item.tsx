@@ -74,7 +74,7 @@ export function ConversationItem({ conversation, rename, remove }: Props) {
 
   return (
     <div
-      className={`group hover:bg-hover flex min-h-8 items-center gap-1.5 rounded-[--radius] px-2 py-1.5 ${
+      className={`group hover:bg-hover flex min-h-8 items-center gap-1.5 rounded-[var(--radius)] px-2 py-1.5 ${
         isOpen ? 'bg-hover' : ''
       }`}
     >

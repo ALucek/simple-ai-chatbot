@@ -13,7 +13,7 @@ export function Toaster() {
         <div
           key={t.id}
           role="status"
-          className="border-border bg-surface text-fg flex items-center gap-3 rounded-[--radius] border px-3 py-2 text-sm shadow-sm"
+          className="border-border bg-surface text-fg flex items-center gap-3 rounded-[var(--radius)] border px-3 py-2 text-sm shadow-sm"
         >
           <span>{t.message}</span>
           <button
