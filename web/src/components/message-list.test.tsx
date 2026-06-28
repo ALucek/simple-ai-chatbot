@@ -22,6 +22,16 @@ describe('MessageList markdown', () => {
     expect(screen.getByText('b')).toBeInTheDocument();
   });
 
+  it('lets long content wrap instead of overflowing', () => {
+    const msgs: ChatMessage[] = [
+      { id: 1, role: 'user', content: 'hello', created_at: '' },
+    ];
+    render(<MessageList messages={msgs} />);
+    const bubble = screen.getByText('hello');
+    expect(bubble.className).toContain('break-words');
+    expect(bubble.className).toContain('min-w-0');
+  });
+
   it('renders a user message as plain text, not markdown', () => {
     const msgs: ChatMessage[] = [
       { id: 1, role: 'user', content: '**not bold**', created_at: '' },

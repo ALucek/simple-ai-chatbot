@@ -24,11 +24,11 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
               </span>
             </div>
             {isUser ? (
-              <span className="border-border bg-surface-muted text-fg max-w-[80%] rounded-[var(--radius)] border px-3 py-2 text-sm whitespace-pre-wrap">
+              <span className="border-border bg-surface-muted text-fg max-w-[80%] min-w-0 rounded-[var(--radius)] border px-3 py-2 text-sm break-words whitespace-pre-wrap">
                 {m.content}
               </span>
             ) : (
-              <div className="markdown text-fg max-w-full text-sm">
+              <div className="markdown text-fg max-w-full min-w-0 text-sm break-words">
                 <ReactMarkdown
                   remarkPlugins={remarkPlugins}
                   rehypePlugins={rehypePlugins}
