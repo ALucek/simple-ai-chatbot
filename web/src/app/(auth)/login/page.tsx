@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Wordmark } from '@/components/wordmark';
@@ -95,23 +96,23 @@ export default function LoginPage() {
           <div className="bg-border h-px w-full" />
           <p className="text-subtle text-center text-xs leading-relaxed">
             By continuing you agree to the{' '}
-            <a
-              href="https://lucek.ai/terms"
+            <Link
+              href="/terms"
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
             >
               Terms
-            </a>{' '}
+            </Link>{' '}
             &amp;{' '}
-            <a
-              href="https://lucek.ai/privacy"
+            <Link
+              href="/privacy"
               target="_blank"
               rel="noopener noreferrer"
               className="underline"
             >
               Privacy Policy
-            </a>
+            </Link>
             .
           </p>
         </div>
