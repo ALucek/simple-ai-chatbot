@@ -3,13 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const maxConns = 5
+
 // NewPool opens a connection pool to Postgres using the given config.
 func NewPool(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
-	pool, err := pgxpool.New(ctx, dsn(cfg))
+	poolCfg, err := pgxpool.ParseConfig(dsn(cfg))
+	if err != nil {
+		return nil, fmt.Errorf("parse db config: %w", err)
+	}
+	poolCfg.MaxConns = maxConns
+	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect to postgres: %w", err)
 	}
@@ -20,8 +29,18 @@ func dsn(cfg Config) string {
 	if cfg.DatabaseURL != "" {
 		return cfg.DatabaseURL
 	}
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
+	u := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(cfg.DBUser, cfg.DBPassword),
+		Path:   "/" + cfg.DBName,
+	}
+	if strings.HasPrefix(cfg.DBHost, "/") {
+		// Unix socket connection keeps the host in the query and uses no port.
+		u.RawQuery = url.Values{"host": {cfg.DBHost}}.Encode()
+	} else {
+		u.Host = cfg.DBHost + ":" + cfg.DBPort
+	}
+	return u.String()
 }
 
 // Healthy runs a trivial query to confirm the database actually answers.
