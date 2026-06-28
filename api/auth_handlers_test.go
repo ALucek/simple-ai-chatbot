@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -8,22 +9,35 @@ import (
 	"testing"
 )
 
-// googleLogin signs in via POST /api/google and returns the issued refresh token.
+// googleLogin signs in via POST /api/google and returns the issued refresh token from Set-Cookie.
 func googleLogin(t *testing.T, mux http.Handler, email string) string {
 	t.Helper()
-	return refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/google", "",
+	return refreshCookieOf(t, do(t, mux, http.MethodPost, "/api/google", "",
 		map[string]string{"id_token": "e2e:" + email}))
 }
 
-func refreshTokenOf(t *testing.T, rec *httptest.ResponseRecorder) string {
+// refreshCookieOf returns the refresh_token value from a response's Set-Cookie.
+func refreshCookieOf(t *testing.T, rec *httptest.ResponseRecorder) string {
 	t.Helper()
-	var out struct {
-		RefreshToken string `json:"refresh_token"`
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == refreshCookieName {
+			return c.Value
+		}
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
-		t.Fatalf("decode refresh_token: %v", err)
+	t.Fatal("no refresh_token cookie in response")
+	return ""
+}
+
+// doCookie sends method+path carrying a refresh_token cookie.
+func doCookie(t *testing.T, mux http.Handler, method, path, refreshToken string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, nil)
+	if refreshToken != "" {
+		req.AddCookie(&http.Cookie{Name: refreshCookieName, Value: refreshToken})
 	}
-	return out.RefreshToken
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	return rec
 }
 
 func TestMe_ReturnsUser(t *testing.T) {
@@ -55,21 +69,41 @@ func TestMe_NoToken(t *testing.T) {
 	}
 }
 
+func TestRefresh_IssuedAsHttpOnlyCookie(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	rec := do(t, mux, http.MethodPost, "/api/google", "",
+		map[string]string{"id_token": "e2e:cookie@x.com"})
+
+	var c *http.Cookie
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == refreshCookieName {
+			c = ck
+		}
+	}
+	if c == nil {
+		t.Fatal("no refresh_token cookie on login")
+	}
+	if !c.HttpOnly || !c.Secure || c.SameSite != http.SameSiteStrictMode || c.Path != "/api" {
+		t.Fatalf("wrong cookie attrs: %+v", c)
+	}
+	if bytes.Contains(rec.Body.Bytes(), []byte("refresh_token")) {
+		t.Fatal("login response body leaked the refresh token")
+	}
+}
+
 func TestRefresh_Then_LogoutRevokes(t *testing.T) {
 	resetDB(t)
 	mux := newTestMux(nil)
 	r0 := googleLogin(t, mux, "r@x.com")
 
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "",
-		map[string]string{"refresh_token": r0}); rr.Code != http.StatusOK {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r0); rr.Code != http.StatusOK {
 		t.Fatalf("refresh: want 200, got %d", rr.Code)
 	}
-	if lo := do(t, mux, http.MethodPost, "/api/logout", "",
-		map[string]string{"refresh_token": r0}); lo.Code != http.StatusNoContent {
+	if lo := doCookie(t, mux, http.MethodPost, "/api/logout", r0); lo.Code != http.StatusNoContent {
 		t.Fatalf("logout: want 204, got %d", lo.Code)
 	}
-	if rr2 := do(t, mux, http.MethodPost, "/api/refresh", "",
-		map[string]string{"refresh_token": r0}); rr2.Code != http.StatusUnauthorized {
+	if rr2 := doCookie(t, mux, http.MethodPost, "/api/refresh", r0); rr2.Code != http.StatusUnauthorized {
 		t.Fatalf("refresh after logout: want 401, got %d", rr2.Code)
 	}
 }
@@ -93,18 +127,18 @@ func TestRefresh_RotatesToken(t *testing.T) {
 	mux := newTestMux(nil)
 	r0 := googleLogin(t, mux, "rot@x.com")
 
-	rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0})
+	rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r0)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("refresh: want 200, got %d", rr.Code)
 	}
-	r1 := refreshTokenOf(t, rr)
+	r1 := refreshCookieOf(t, rr)
 	if r1 == "" || r1 == r0 {
-		t.Fatalf("refresh must return a new refresh token, got %q (old %q)", r1, r0)
+		t.Fatalf("refresh must rotate the token, got %q (old %q)", r1, r0)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r1}); rr.Code != http.StatusOK {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r1); rr.Code != http.StatusOK {
 		t.Fatalf("new token: want 200, got %d", rr.Code)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r0); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("old token reuse: want 401, got %d", rr.Code)
 	}
 }
@@ -116,14 +150,14 @@ func TestRefresh_ReuseRevokesFamilyOnly(t *testing.T) {
 	r0 := googleLogin(t, mux, "reuse@x.com")
 	rB := googleLogin(t, mux, "reuse@x.com")
 
-	r1 := refreshTokenOf(t, do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}))
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+	r1 := refreshCookieOf(t, doCookie(t, mux, http.MethodPost, "/api/refresh", r0))
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r0); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("replay: want 401, got %d", rr.Code)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r1}); rr.Code != http.StatusUnauthorized {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r1); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("family sibling after reuse: want 401, got %d", rr.Code)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": rB}); rr.Code != http.StatusOK {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", rB); rr.Code != http.StatusOK {
 		t.Fatalf("other family after reuse: want 200, got %d", rr.Code)
 	}
 }
@@ -134,13 +168,13 @@ func TestLogout_DeletesWithoutRevokingOthers(t *testing.T) {
 	r0 := googleLogin(t, mux, "lo@x.com")
 	rB := googleLogin(t, mux, "lo@x.com")
 
-	if lo := do(t, mux, http.MethodPost, "/api/logout", "", map[string]string{"refresh_token": r0}); lo.Code != http.StatusNoContent {
+	if lo := doCookie(t, mux, http.MethodPost, "/api/logout", r0); lo.Code != http.StatusNoContent {
 		t.Fatalf("logout: want 204, got %d", lo.Code)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": r0}); rr.Code != http.StatusUnauthorized {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", r0); rr.Code != http.StatusUnauthorized {
 		t.Fatalf("refresh after logout: want 401, got %d", rr.Code)
 	}
-	if rr := do(t, mux, http.MethodPost, "/api/refresh", "", map[string]string{"refresh_token": rB}); rr.Code != http.StatusOK {
+	if rr := doCookie(t, mux, http.MethodPost, "/api/refresh", rB); rr.Code != http.StatusOK {
 		t.Fatalf("other session after logout: want 200, got %d", rr.Code)
 	}
 }
