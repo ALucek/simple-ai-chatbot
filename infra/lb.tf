@@ -23,7 +23,6 @@ resource "google_compute_region_network_endpoint_group" "web" {
 resource "google_compute_backend_service" "api" {
   name                  = "chat-api-backend"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = 3600
   backend {
     group = google_compute_region_network_endpoint_group.api.id
   }
