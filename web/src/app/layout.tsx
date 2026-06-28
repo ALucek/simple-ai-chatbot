@@ -12,6 +12,9 @@ const mono = Share_Tech_Mono({
   display: 'swap',
 });
 
+// Render dynamically so the per-request CSP nonce is stamped onto the scripts.
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Chat Łucek',
   description: 'A minimal multi-user streaming chatbot.',
