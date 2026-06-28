@@ -112,6 +112,17 @@ export default function LoginPage() {
             .
           </p>
         </div>
+        <p className="text-subtle text-xs">
+          Made by{' '}
+          <a
+            href="https://lucek.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Adam Lucek
+          </a>
+        </p>
       </div>
     </main>
   );
