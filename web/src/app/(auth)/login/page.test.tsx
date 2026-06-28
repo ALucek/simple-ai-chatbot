@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import LoginPage from './page';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
@@ -48,7 +48,7 @@ describe('LoginPage', () => {
     loginWithGoogle.mockResolvedValue(undefined);
     render(<LoginPage />);
     expect(capturedCallback).toBeTypeOf('function');
-    await capturedCallback!({ credential: 'tok-123' });
+    await act(async () => capturedCallback!({ credential: 'tok-123' }));
     expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
   });
@@ -58,7 +58,7 @@ describe('LoginPage', () => {
       new ApiError(401, 'invalid google token'),
     );
     render(<LoginPage />);
-    await capturedCallback!({ credential: 'bad' });
+    await act(async () => capturedCallback!({ credential: 'bad' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'invalid google token',
     );
