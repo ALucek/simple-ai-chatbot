@@ -52,12 +52,22 @@ describe('LoginPage', () => {
     ).toHaveAttribute('href', 'https://lucek.ai/privacy');
   });
 
-  it('exchanges the Google credential and redirects home', async () => {
+  it('exchanges the Google credential but waits for authed status to redirect', async () => {
     loginWithGoogle.mockResolvedValue(undefined);
-    render(<LoginPage />);
+    const { rerender } = render(<LoginPage />);
     expect(capturedCallback).toBeTypeOf('function');
     await act(async () => capturedCallback!({ credential: 'tok-123' }));
     expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
+    // Status is still 'anon' until the provider commits the session; no redirect yet.
+    expect(replace).not.toHaveBeenCalled();
+    // Provider flips to authed → the effect redirects home.
+    vi.mocked(useAuth).mockReturnValue({
+      user: {},
+      status: 'authed',
+      loginWithGoogle,
+      logout: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>);
+    rerender(<LoginPage />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
   });
 

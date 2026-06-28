@@ -53,7 +53,6 @@ export default function LoginPage() {
           setLoading(true);
           try {
             await loginWithGoogle(credential);
-            router.replace('/');
           } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Sign-in failed');
             setLoading(false);
@@ -75,7 +74,7 @@ export default function LoginPage() {
     s.async = true;
     s.onload = init;
     document.body.appendChild(s);
-  }, [loginWithGoogle, router]);
+  }, [loginWithGoogle]);
 
   return (
     <main className="bg-bg flex min-h-dvh items-center justify-center p-6">
