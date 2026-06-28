@@ -4,10 +4,11 @@ import { useViewportHeight } from './use-viewport-height';
 
 type Listeners = Record<string, Array<() => void>>;
 
-function makeVisualViewport(height: number) {
+function makeVisualViewport(height: number, offsetTop = 0) {
   const listeners: Listeners = {};
   return {
     height,
+    offsetTop,
     addEventListener: vi.fn((type: string, cb: () => void) => {
       (listeners[type] ||= []).push(cb);
     }),
@@ -71,6 +72,14 @@ describe('useViewportHeight', () => {
     expect(
       document.documentElement.style.getPropertyValue('--app-height'),
     ).toBe('300px');
+  });
+
+  it('adds offsetTop so the shell reaches the keyboard when iOS shifts the viewport', () => {
+    setVisualViewport(makeVisualViewport(400, 60));
+    renderHook(() => useViewportHeight());
+    expect(
+      document.documentElement.style.getPropertyValue('--app-height'),
+    ).toBe('460px');
   });
 
   it('removes its listeners on unmount', () => {
