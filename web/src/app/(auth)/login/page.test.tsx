@@ -1,69 +1,66 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, waitFor } from '@testing-library/react';
 import LoginPage from './page';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 
 const replace = vi.fn();
-const login = vi.fn();
+const loginWithGoogle = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 vi.mock('@/lib/auth-context');
 
+type GsiCallback = (r: { credential: string }) => void;
+let capturedCallback: GsiCallback | null = null;
+
 beforeEach(() => {
   vi.resetAllMocks();
+  capturedCallback = null;
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID = 'test-client-id';
   vi.mocked(useAuth).mockReturnValue({
     user: null,
     status: 'anon',
-    login,
-    signup: vi.fn(),
+    loginWithGoogle,
     logout: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>);
+  // Fake Google Identity Services: capture the callback, render a button.
+  (window as unknown as { google: unknown }).google = {
+    accounts: {
+      id: {
+        initialize: (cfg: { callback: GsiCallback }) => {
+          capturedCallback = cfg.callback;
+        },
+        renderButton: (el: HTMLElement) => {
+          el.appendChild(document.createElement('button'));
+        },
+      },
+    },
+  };
 });
 
 describe('LoginPage', () => {
-  it('submits credentials and redirects home on success', async () => {
-    login.mockResolvedValue(undefined);
+  it('renders the Google sign-in mount point and button', () => {
     render(<LoginPage />);
-    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.co');
-    await userEvent.type(
-      screen.getByPlaceholderText('Password'),
-      'password123',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
-
-    expect(login).toHaveBeenCalledWith('a@b.co', 'password123');
-    expect(replace).toHaveBeenCalledWith('/');
+    expect(screen.getByTestId('google-signin')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
   });
 
-  it('shows the server error message on failure', async () => {
-    login.mockRejectedValue(new ApiError(401, 'invalid email or password'));
+  it('exchanges the Google credential and redirects home', async () => {
+    loginWithGoogle.mockResolvedValue(undefined);
     render(<LoginPage />);
-    await userEvent.type(screen.getByPlaceholderText('Email'), 'a@b.co');
-    await userEvent.type(screen.getByPlaceholderText('Password'), 'wrong');
-    await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
+    expect(capturedCallback).toBeTypeOf('function');
+    await capturedCallback!({ credential: 'tok-123' });
+    expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
+    await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
+  });
 
+  it('shows the server error message when sign-in fails', async () => {
+    loginWithGoogle.mockRejectedValue(
+      new ApiError(401, 'invalid google token'),
+    );
+    render(<LoginPage />);
+    await capturedCallback!({ credential: 'bad' });
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'invalid email or password',
+      'invalid google token',
     );
-  });
-
-  it('shows an inline error and does not submit when fields are empty', async () => {
-    render(<LoginPage />);
-    await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/required/i);
-    expect(login).not.toHaveBeenCalled();
-  });
-
-  it('rejects a malformed email inline without submitting', async () => {
-    render(<LoginPage />);
-    await userEvent.type(screen.getByPlaceholderText('Email'), 'not-an-email');
-    await userEvent.type(
-      screen.getByPlaceholderText('Password'),
-      'password123',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Log in' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/valid email/i);
-    expect(login).not.toHaveBeenCalled();
   });
 });

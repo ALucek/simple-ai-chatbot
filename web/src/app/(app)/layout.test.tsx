@@ -21,8 +21,7 @@ function authValue(status: 'loading' | 'authed' | 'anon') {
   return {
     user: null,
     status,
-    login: vi.fn(),
-    signup: vi.fn(),
+    loginWithGoogle: vi.fn(),
     logout: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>;
 }

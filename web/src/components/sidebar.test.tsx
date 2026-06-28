@@ -28,8 +28,7 @@ beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue({
     user: { id: 1, email: 'a@b.co' },
     status: 'authed',
-    login: vi.fn(),
-    signup: vi.fn(),
+    loginWithGoogle: vi.fn(),
     logout: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>);
   vi.mocked(useUsage).mockReturnValue({

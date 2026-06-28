@@ -115,20 +115,11 @@ async function errorMessage(res: Response): Promise<string> {
   return `request failed (${res.status})`;
 }
 
-export async function signup(email: string, password: string): Promise<void> {
+export async function loginWithGoogle(idToken: string): Promise<void> {
   setSession(
-    await request<Tokens>('/api/signup', {
+    await request<Tokens>('/api/google', {
       method: 'POST',
-      body: { email, password },
-    }),
-  );
-}
-
-export async function login(email: string, password: string): Promise<void> {
-  setSession(
-    await request<Tokens>('/api/login', {
-      method: 'POST',
-      body: { email, password },
+      body: { id_token: idToken },
     }),
   );
 }

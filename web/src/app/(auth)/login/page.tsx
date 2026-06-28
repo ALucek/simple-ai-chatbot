@@ -1,76 +1,85 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Wordmark } from '@/components/wordmark';
 
+const GSI_SRC = 'https://accounts.google.com/gsi/client';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (cfg: {
+            client_id: string;
+            callback: (r: { credential: string }) => void;
+          }) => void;
+          renderButton: (
+            el: HTMLElement,
+            opts: Record<string, unknown>,
+          ) => void;
+        };
+      };
+    };
+  }
+}
+
 export default function LoginPage() {
-  const { status, login } = useAuth();
+  const { status, loginWithGoogle } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const mount = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (status === 'authed') router.replace('/');
   }, [status, router]);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    if (!email.trim() || !password) {
-      setError(!email.trim() ? 'Email is required' : 'Password is required');
+  useEffect(() => {
+    function init() {
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!window.google || !mount.current || !clientId) return;
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          try {
+            await loginWithGoogle(credential);
+            router.replace('/');
+          } catch (err) {
+            setError(err instanceof ApiError ? err.message : 'Sign-in failed');
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(mount.current, {
+        theme: 'outline',
+        size: 'large',
+      });
+    }
+    if (window.google) {
+      init();
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Enter a valid email');
-      return;
-    }
-    try {
-      await login(email, password);
-      router.replace('/');
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Something went wrong');
-    }
-  }
+    const s = document.createElement('script');
+    s.src = GSI_SRC;
+    s.async = true;
+    s.onload = init;
+    document.body.appendChild(s);
+  }, [loginWithGoogle, router]);
 
   return (
     <main className="bg-bg flex min-h-dvh items-center justify-center p-6">
       <div className="flex flex-col items-center gap-6">
         <Wordmark />
         <div className="border-border bg-surface w-full max-w-sm rounded-[var(--radius)] border p-8">
-          <h1 className="text-fg-strong mb-6 text-xl">Log in</h1>
-          <form onSubmit={onSubmit} noValidate className="flex flex-col gap-3">
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {error && (
-              <p role="alert" className="text-danger text-sm">
-                {error}
-              </p>
-            )}
-            <Button type="submit">Log in</Button>
-          </form>
-          <p className="text-muted mt-4 text-sm">
-            No account?{' '}
-            <Link href="/signup" className="text-fg-strong underline">
-              Sign up
-            </Link>
-          </p>
+          <h1 className="text-fg-strong mb-6 text-xl">Sign in</h1>
+          <div data-testid="google-signin" ref={mount} />
+          {error && (
+            <p role="alert" className="text-danger mt-4 text-sm">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </main>

@@ -7,12 +7,12 @@ import * as api from './api';
 vi.mock('./api');
 
 function Probe() {
-  const { user, status, login, logout } = useAuth();
+  const { user, status, loginWithGoogle, logout } = useAuth();
   return (
     <div>
       <span data-testid="status">{status}</span>
       <span data-testid="email">{user?.email ?? ''}</span>
-      <button onClick={() => login('a@b.co', 'pw')}>login</button>
+      <button onClick={() => loginWithGoogle('tok')}>login</button>
       <button onClick={() => logout()}>logout</button>
     </div>
   );
@@ -54,7 +54,7 @@ describe('AuthProvider', () => {
 
   it('login sets the user', async () => {
     vi.mocked(api.hasRefreshToken).mockReturnValue(false);
-    vi.mocked(api.login).mockResolvedValue();
+    vi.mocked(api.loginWithGoogle).mockResolvedValue();
     vi.mocked(api.me).mockResolvedValue({ id: 2, email: 'c@d.co' });
 
     render(

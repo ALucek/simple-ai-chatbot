@@ -8,8 +8,7 @@ type Status = 'loading' | 'authed' | 'anon';
 interface AuthValue {
   user: api.User | null;
   status: Status;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -52,14 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => api.setOnUnauthorized(null);
   }, []);
 
-  async function login(email: string, password: string) {
-    await api.login(email, password);
-    setUser(await api.me());
-    setStatus('authed');
-  }
-
-  async function signup(email: string, password: string) {
-    await api.signup(email, password);
+  async function loginWithGoogle(idToken: string) {
+    await api.loginWithGoogle(idToken);
     setUser(await api.me());
     setStatus('authed');
   }
@@ -71,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, status, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, status, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

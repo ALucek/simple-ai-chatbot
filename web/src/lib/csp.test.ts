@@ -22,4 +22,9 @@ describe('buildCSP', () => {
     expect(csp).toContain('unsafe-eval');
     expect(csp).toContain('ws:');
   });
+
+  it('allows the Google Identity Services origins', () => {
+    const csp = buildCSP('http://localhost:8080', false);
+    expect(csp).toContain('https://accounts.google.com/gsi/');
+  });
 });

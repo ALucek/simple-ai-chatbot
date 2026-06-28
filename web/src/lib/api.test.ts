@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  login,
+  loginWithGoogle,
   me,
   refreshAccess,
   clearSession,
@@ -31,7 +31,7 @@ beforeEach(() => {
 });
 
 describe('api client', () => {
-  it('login stores tokens and later calls send the Bearer header', async () => {
+  it('loginWithGoogle stores tokens and later calls send the Bearer header', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -40,8 +40,9 @@ describe('api client', () => {
       .mockResolvedValueOnce(jsonResponse(200, { id: 1, email: 'a@b.co' }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await login('a@b.co', 'password123');
+    await loginWithGoogle('e2e:a@b.co');
     expect(localStorage.getItem('refresh_token')).toBe('r1');
+    expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8080/api/google');
 
     await me();
     const headers = (fetchMock.mock.calls[1][1] as RequestInit)
