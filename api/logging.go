@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -84,6 +85,22 @@ func (h contextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 func (h contextHandler) WithGroup(name string) slog.Handler {
 	return contextHandler{h.Handler.WithGroup(name)}
+}
+
+// withRecover turns a handler panic into a logged 500 instead of a dropped connection.
+func withRecover(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.LogAttrs(r.Context(), slog.LevelError, "panic recovered",
+					slog.Any("panic", rec),
+					slog.String("stack", string(debug.Stack())),
+				)
+				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 func withLogging(next http.Handler) http.Handler {

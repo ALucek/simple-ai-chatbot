@@ -112,3 +112,35 @@ func TestWithLogging_HealthPathsAreDebug(t *testing.T) {
 		t.Fatalf("health probe should not log at info level: %s", buf.String())
 	}
 }
+
+func TestWithRecover_PanicReturns500AndLogs(t *testing.T) {
+	var buf bytes.Buffer
+	slog.SetDefault(slog.New(contextHandler{slog.NewJSONHandler(&buf, nil)}))
+
+	h := withRequestID(withRecover(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("boom")
+	})))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/x", nil)) // must not panic the test
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("want 500, got %d", rec.Code)
+	}
+	out := buf.String()
+	for _, want := range []string{`"level":"ERROR"`, `"msg":"panic recovered"`, `"request_id":`, "boom"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("panic log missing %s in: %s", want, out)
+		}
+	}
+}
+
+func TestWithRecover_PassesThroughNormal(t *testing.T) {
+	h := withRecover(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTeapot)
+	}))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/x", nil))
+	if rec.Code != http.StatusTeapot {
+		t.Fatalf("want 418, got %d", rec.Code)
+	}
+}
