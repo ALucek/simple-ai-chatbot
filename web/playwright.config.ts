@@ -26,13 +26,18 @@ export default defineConfig({
     {
       command: 'cd ../api && go run .',
       url: `http://localhost:${API_PORT}/readyz`,
-      env: { OPENROUTER_BASE_URL: `http://localhost:${FAKE_PORT}` },
+      env: {
+        OPENROUTER_BASE_URL: `http://localhost:${FAKE_PORT}`,
+        GOOGLE_AUTH_FAKE: '1',
+        GOOGLE_CLIENT_ID: 'e2e-dummy',
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
     {
       command: `pnpm dev --port ${WEB_PORT}`,
       url: `http://localhost:${WEB_PORT}`,
+      env: { NEXT_PUBLIC_GOOGLE_CLIENT_ID: 'e2e-dummy' },
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

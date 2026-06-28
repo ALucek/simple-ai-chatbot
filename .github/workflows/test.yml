@@ -50,6 +50,9 @@ jobs:
       PORT: '8080'
       JWT_SECRET: test-secret-at-least-32-bytes-long-xx
       OPENROUTER_API_KEY: test-key
+      GOOGLE_CLIENT_ID: e2e-dummy
+      GOOGLE_AUTH_FAKE: '1'
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: e2e-dummy
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6

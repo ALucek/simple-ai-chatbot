@@ -52,6 +52,7 @@ export default function LoginPage() {
           }
         },
       });
+      mount.current.innerHTML = '';
       window.google.accounts.id.renderButton(mount.current, {
         theme: 'outline',
         size: 'large',

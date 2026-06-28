@@ -1,16 +1,26 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
-test('signup, send a message, stream a reply, persist on reload', async ({
+const FAKE_GSI = readFileSync(path.join(__dirname, 'fake-gsi.js'), 'utf8');
+
+test('sign in with Google, send a message, stream a reply, persist on reload', async ({
   page,
 }) => {
   const email = `e2e-${Date.now()}@gmail.com`;
   const message = 'Tell me a joke about cats please';
 
-  // Sign up → lands on the app shell.
-  await page.goto('/signup');
-  await page.getByPlaceholder('Email').fill(email);
-  await page.getByPlaceholder('Password').fill('password123');
-  await page.getByRole('button', { name: 'Sign up' }).click();
+  // Serve the fake GSI script in place of Google's, and pick this run's email.
+  await page.route('https://accounts.google.com/gsi/client', (route) =>
+    route.fulfill({ contentType: 'application/javascript', body: FAKE_GSI }),
+  );
+  await page.addInitScript((e) => {
+    (window as unknown as { __E2E_EMAIL__: string }).__E2E_EMAIL__ = e;
+  }, email);
+
+  // Real login flow: button → callback → loginWithGoogle → /api/google → session.
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Sign in with Google' }).click();
   await expect(page).toHaveURL('/');
 
   // Create a conversation.
