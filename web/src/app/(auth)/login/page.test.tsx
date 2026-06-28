@@ -38,10 +38,18 @@ beforeEach(() => {
 });
 
 describe('LoginPage', () => {
-  it('renders the Google sign-in mount point and button', () => {
+  it('renders the mount point, button, and legal footer with no heading', () => {
     render(<LoginPage />);
     expect(screen.getByTestId('google-signin')).toBeInTheDocument();
     expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
+      'href',
+      'https://lucek.ai/terms',
+    );
+    expect(
+      screen.getByRole('link', { name: 'Privacy Policy' }),
+    ).toHaveAttribute('href', 'https://lucek.ai/privacy');
   });
 
   it('exchanges the Google credential and redirects home', async () => {
@@ -51,6 +59,23 @@ describe('LoginPage', () => {
     await act(async () => capturedCallback!({ credential: 'tok-123' }));
     expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/'));
+  });
+
+  it('shows a signing-in indicator while the exchange is in flight', async () => {
+    let resolve!: () => void;
+    loginWithGoogle.mockReturnValue(
+      new Promise<void>((r) => {
+        resolve = () => r();
+      }),
+    );
+    render(<LoginPage />);
+    await act(async () => {
+      capturedCallback!({ credential: 'tok-123' });
+    });
+    expect(screen.getByText(/signing in/i)).toBeInTheDocument();
+    await act(async () => {
+      resolve();
+    });
   });
 
   it('shows the server error message when sign-in fails', async () => {

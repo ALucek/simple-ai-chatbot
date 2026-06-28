@@ -32,6 +32,7 @@ export default function LoginPage() {
   const router = useRouter();
   const mount = useRef<HTMLDivElement>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'authed') router.replace('/');
@@ -44,11 +45,14 @@ export default function LoginPage() {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async ({ credential }) => {
+          setError('');
+          setLoading(true);
           try {
             await loginWithGoogle(credential);
             router.replace('/');
           } catch (err) {
             setError(err instanceof ApiError ? err.message : 'Sign-in failed');
+            setLoading(false);
           }
         },
       });
@@ -73,14 +77,40 @@ export default function LoginPage() {
     <main className="bg-bg flex min-h-dvh items-center justify-center p-6">
       <div className="flex flex-col items-center gap-6">
         <Wordmark />
-        <div className="border-border bg-surface w-full max-w-sm rounded-[var(--radius)] border p-8">
-          <h1 className="text-fg-strong mb-6 text-xl">Sign in</h1>
+        <div className="border-border bg-surface flex w-full max-w-sm flex-col items-center gap-4 rounded-[var(--radius)] border p-8">
+          {loading && (
+            <p className="text-subtle text-xs tracking-[0.16em] uppercase">
+              Signing in…
+            </p>
+          )}
           <div data-testid="google-signin" ref={mount} />
           {error && (
-            <p role="alert" className="text-danger mt-4 text-sm">
+            <p role="alert" className="text-danger text-sm">
               {error}
             </p>
           )}
+          <div className="bg-border h-px w-full" />
+          <p className="text-subtle text-center text-xs leading-relaxed">
+            By continuing you agree to the{' '}
+            <a
+              href="https://lucek.ai/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Terms
+            </a>{' '}
+            &amp;{' '}
+            <a
+              href="https://lucek.ai/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Privacy Policy
+            </a>
+            .
+          </p>
         </div>
       </div>
     </main>
