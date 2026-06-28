@@ -9,3 +9,9 @@
 
 # local planning/design notes (kept out of the example repo)
 docs/
+
+# terraform
+infra/.terraform/
+infra/*.tfstate*
+infra/terraform.tfvars
+infra/backend.hcl
