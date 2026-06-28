@@ -53,6 +53,41 @@ describe('useMessages (store)', () => {
     expect(result.current.messages).toEqual(mA);
   });
 
+  it('loadOlder prepends the previous page using a keyset cursor', async () => {
+    const newest: Message[] = Array.from(
+      { length: api.MESSAGES_PAGE },
+      (_, i) => ({
+        id: 51 + i,
+        role: 'user',
+        content: `m${51 + i}`,
+        created_at: 't',
+      }),
+    );
+    const older: Message[] = Array.from({ length: 10 }, (_, i) => ({
+      id: 1 + i,
+      role: 'user',
+      content: `m${1 + i}`,
+      created_at: 't',
+    }));
+    vi.mocked(api.getMessages)
+      .mockResolvedValueOnce(newest)
+      .mockResolvedValueOnce(older);
+    const { result } = renderHook(({ id }) => useMessages(id), {
+      initialProps: { id: 1 },
+      wrapper,
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasMore).toBe(true);
+
+    act(() => result.current.loadOlder());
+    await waitFor(() =>
+      expect(result.current.messages).toHaveLength(api.MESSAGES_PAGE + 10),
+    );
+    expect(api.getMessages).toHaveBeenLastCalledWith(1, 51); // oldest loaded id
+    expect(result.current.messages[0].id).toBe(1); // older page prepended
+    expect(result.current.hasMore).toBe(false); // short older page = end
+  });
+
   it('sets notFound on a 404', async () => {
     vi.mocked(api.getMessages).mockRejectedValue(
       new ApiError(404, 'conversation not found'),

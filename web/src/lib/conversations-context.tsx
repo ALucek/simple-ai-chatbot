@@ -1,8 +1,16 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   type Conversation,
+  CONVERSATIONS_PAGE,
   listConversations,
   createConversation,
   renameConversation,
@@ -12,7 +20,10 @@ import {
 interface ConversationsValue {
   conversations: Conversation[];
   loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
   error: string | null;
+  loadMore: () => void;
   create: () => Promise<Conversation>;
   rename: (id: number, title: string) => Promise<void>;
   remove: (id: number) => Promise<void>;
@@ -28,13 +39,19 @@ export function ConversationsProvider({
 }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetched = useRef(0); // rows pulled from the server so far (the next offset)
 
   useEffect(() => {
     let ignore = false;
     listConversations()
       .then((list) => {
-        if (!ignore) setConversations(list);
+        if (ignore) return;
+        setConversations(list);
+        fetched.current = list.length;
+        setHasMore(list.length === CONVERSATIONS_PAGE);
       })
       .catch(() => {
         if (!ignore) setError('Couldn’t load conversations');
@@ -46,6 +63,22 @@ export function ConversationsProvider({
       ignore = true;
     };
   }, []);
+
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    listConversations(fetched.current)
+      .then((next) => {
+        setConversations((prev) => {
+          const seen = new Set(prev.map((c) => c.id));
+          return [...prev, ...next.filter((c) => !seen.has(c.id))];
+        });
+        fetched.current += next.length;
+        setHasMore(next.length === CONVERSATIONS_PAGE);
+      })
+      .catch(() => setHasMore(false))
+      .finally(() => setLoadingMore(false));
+  }, [loadingMore, hasMore]);
 
   async function create(): Promise<Conversation> {
     const convo = await createConversation();
@@ -77,7 +110,10 @@ export function ConversationsProvider({
       value={{
         conversations,
         loading,
+        loadingMore,
+        hasMore,
         error,
+        loadMore,
         create,
         rename,
         remove,

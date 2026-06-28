@@ -9,7 +9,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { type Message, getMessages, sendMessage, ApiError } from './api';
+import {
+  type Message,
+  MESSAGES_PAGE,
+  getMessages,
+  sendMessage,
+  ApiError,
+} from './api';
 import { useConversationsContext } from './conversations-context';
 import { useUsage } from './usage-context';
 
@@ -18,6 +24,8 @@ export type ChatMessage = Message & { streaming?: boolean };
 interface ConvState {
   messages: ChatMessage[];
   loading: boolean;
+  loadingOlder: boolean;
+  hasMore: boolean;
   error: string | null;
   notFound: boolean;
   sending: boolean;
@@ -26,6 +34,8 @@ interface ConvState {
 const LOADING: ConvState = {
   messages: [],
   loading: true,
+  loadingOlder: false,
+  hasMore: false,
   error: null,
   notFound: false,
   sending: false,
@@ -34,6 +44,7 @@ const LOADING: ConvState = {
 interface MessagesValue {
   byId: Record<number, ConvState>;
   load: (id: number) => void;
+  loadOlder: (id: number) => void;
   send: (id: number, content: string) => Promise<void>;
   stop: (id: number) => void;
 }
@@ -66,6 +77,12 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Latest state, read by loadOlder without widening its dependencies.
+  const stateRef = useRef(byId);
+  useEffect(() => {
+    stateRef.current = byId;
+  });
+
   const load = useCallback(
     (id: number) => {
       if (loaded.current.has(id)) return;
@@ -76,6 +93,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
           patch(id, () => ({
             messages: m,
             loading: false,
+            loadingOlder: false,
+            hasMore: m.length === MESSAGES_PAGE,
             error: null,
             notFound: false,
             sending: false,
@@ -91,6 +110,28 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
             notFound,
           }));
         });
+    },
+    [patch],
+  );
+
+  // loadOlder prepends the page before the oldest loaded message (keyset cursor).
+  const loadOlder = useCallback(
+    (id: number) => {
+      const s = stateRef.current[id];
+      if (!s || s.loadingOlder || !s.hasMore || s.messages.length === 0) return;
+      const before = s.messages[0].id;
+      if (before <= 0) return; // optimistic temp ids are negative
+      patch(id, (cur) => ({ ...cur, loadingOlder: true }));
+      getMessages(id, before)
+        .then((older) =>
+          patch(id, (cur) => ({
+            ...cur,
+            loadingOlder: false,
+            hasMore: older.length === MESSAGES_PAGE,
+            messages: [...older, ...cur.messages],
+          })),
+        )
+        .catch(() => patch(id, (cur) => ({ ...cur, loadingOlder: false })));
     },
     [patch],
   );
@@ -172,8 +213,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ byId, load, send, stop }),
-    [byId, load, send, stop],
+    () => ({ byId, load, loadOlder, send, stop }),
+    [byId, load, loadOlder, send, stop],
   );
 
   return (
@@ -186,10 +227,13 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 export interface UseMessages {
   messages: ChatMessage[];
   loading: boolean;
+  loadingOlder: boolean;
+  hasMore: boolean;
   error: string | null;
   notFound: boolean;
   sending: boolean;
   send: (content: string) => Promise<void>;
+  loadOlder: () => void;
   stop: () => void;
 }
 
@@ -208,10 +252,13 @@ export function useMessages(id: number): UseMessages {
   return {
     messages: state.messages,
     loading: state.loading,
+    loadingOlder: state.loadingOlder,
+    hasMore: state.hasMore,
     error: state.error,
     notFound: state.notFound,
     sending: state.sending,
     send: (content: string) => ctx.send(id, content),
+    loadOlder: () => ctx.loadOlder(id),
     stop: () => ctx.stop(id),
   };
 }

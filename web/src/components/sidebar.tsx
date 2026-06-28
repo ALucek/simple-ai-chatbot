@@ -12,8 +12,16 @@ import { useToast } from '@/lib/toast-context';
 export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { conversations, loading, error, create, rename, remove } =
-    useConversationsContext();
+  const {
+    conversations,
+    loading,
+    loadingMore,
+    error,
+    loadMore,
+    create,
+    rename,
+    remove,
+  } = useConversationsContext();
 
   const { toast } = useToast();
 
@@ -26,6 +34,12 @@ export function Sidebar() {
     }
   }
 
+  // Fetch the next page when scrolled near the bottom of the list.
+  function onScroll(e: React.UIEvent<HTMLElement>) {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 100) loadMore();
+  }
+
   return (
     <aside className="border-border bg-surface flex h-full w-64 flex-col border-r">
       <div className="border-border border-b p-3 pl-[52px]">
@@ -34,7 +48,10 @@ export function Sidebar() {
         </Button>
       </div>
 
-      <nav className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+      <nav
+        onScroll={onScroll}
+        className="flex-1 space-y-0.5 overflow-y-auto p-1.5"
+      >
         {loading && (
           <div className="space-y-1 p-1">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -53,6 +70,9 @@ export function Sidebar() {
               remove={remove}
             />
           ))}
+        {loadingMore && (
+          <p className="text-subtle p-2 text-center text-xs">loading…</p>
+        )}
       </nav>
 
       <div className="border-border flex h-[var(--bottombar-h)] items-center gap-2 border-t px-3 text-sm">

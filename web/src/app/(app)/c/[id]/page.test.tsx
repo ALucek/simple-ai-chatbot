@@ -23,6 +23,9 @@ describe('ConversationPage', () => {
       send: vi.fn(),
       stop: vi.fn(),
       sending: false,
+      loadingOlder: false,
+      hasMore: false,
+      loadOlder: vi.fn(),
     });
     render(<ConversationPage />);
     expect(screen.getByText('Hi')).toBeInTheDocument();
@@ -38,6 +41,9 @@ describe('ConversationPage', () => {
       send: vi.fn(),
       stop: vi.fn(),
       sending: false,
+      loadingOlder: false,
+      hasMore: false,
+      loadOlder: vi.fn(),
     });
     render(<ConversationPage />);
     expect(screen.getByText('No messages yet')).toBeInTheDocument();
@@ -52,6 +58,9 @@ describe('ConversationPage', () => {
       send: vi.fn(),
       stop: vi.fn(),
       sending: false,
+      loadingOlder: false,
+      hasMore: false,
+      loadOlder: vi.fn(),
     });
     render(<ConversationPage />);
     expect(screen.getByText('Conversation not found')).toBeInTheDocument();
@@ -66,6 +75,9 @@ describe('ConversationPage', () => {
       send: vi.fn(),
       stop: vi.fn(),
       sending: false,
+      loadingOlder: false,
+      hasMore: false,
+      loadOlder: vi.fn(),
     });
     render(<ConversationPage />);
     expect(screen.getByRole('textbox')).toBeInTheDocument();
@@ -89,6 +101,9 @@ describe('ConversationPage', () => {
       send: vi.fn(),
       stop: vi.fn(),
       sending: false,
+      loadingOlder: false,
+      hasMore: false,
+      loadOlder: vi.fn(),
     });
     render(<ConversationPage />);
     // Markdown renders the content in its own element; the caret is a sibling node.

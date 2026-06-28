@@ -6,7 +6,16 @@ import {
 } from './conversations-context';
 import * as api from './api';
 
-vi.mock('./api');
+vi.mock('./api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api')>();
+  return {
+    ...actual,
+    listConversations: vi.fn(),
+    createConversation: vi.fn(),
+    renameConversation: vi.fn(),
+    deleteConversation: vi.fn(),
+  };
+});
 
 const c1 = { id: 1, title: 'One', created_at: 't', updated_at: 't' };
 const c2 = { id: 2, title: 'Two', created_at: 't', updated_at: 't' };
@@ -59,6 +68,35 @@ describe('ConversationsProvider', () => {
       await result.current.remove(1);
     });
     expect(result.current.conversations).toEqual([c2]);
+  });
+
+  it('loadMore fetches the next page at the right offset when the first is full', async () => {
+    const page1 = Array.from({ length: api.CONVERSATIONS_PAGE }, (_, i) => ({
+      id: i + 1,
+      title: `c${i}`,
+      created_at: 't',
+      updated_at: 't',
+    }));
+    const page2 = [
+      { id: 999, title: 'last', created_at: 't', updated_at: 't' },
+    ];
+    vi.mocked(api.listConversations)
+      .mockResolvedValueOnce(page1)
+      .mockResolvedValueOnce(page2);
+    const { result } = renderHook(() => useConversationsContext(), { wrapper });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasMore).toBe(true);
+
+    act(() => result.current.loadMore());
+    await waitFor(() =>
+      expect(result.current.conversations).toHaveLength(
+        api.CONVERSATIONS_PAGE + 1,
+      ),
+    );
+    expect(api.listConversations).toHaveBeenLastCalledWith(
+      api.CONVERSATIONS_PAGE,
+    );
+    expect(result.current.hasMore).toBe(false);
   });
 
   it('patchConversation merges fields in place', async () => {

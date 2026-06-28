@@ -101,7 +101,7 @@ describe('conversation endpoints', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(listConversations()).resolves.toEqual(data);
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'http://localhost:8080/api/conversations',
+      'http://localhost:8080/api/conversations?limit=30&offset=0',
     );
   });
 
@@ -140,7 +140,16 @@ describe('conversation endpoints', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(getMessages(7)).resolves.toEqual(msgs);
     expect(fetchMock.mock.calls[0][0]).toBe(
-      'http://localhost:8080/api/conversations/7/messages',
+      'http://localhost:8080/api/conversations/7/messages?limit=50',
+    );
+  });
+
+  it('getMessages adds the before cursor for older pages', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, []));
+    vi.stubGlobal('fetch', fetchMock);
+    await getMessages(7, 42);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://localhost:8080/api/conversations/7/messages?limit=50&before=42',
     );
   });
 

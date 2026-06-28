@@ -152,8 +152,13 @@ export interface Message {
   created_at: string;
 }
 
-export function listConversations(): Promise<Conversation[]> {
-  return request<Conversation[]>('/api/conversations');
+export const CONVERSATIONS_PAGE = 30;
+export const MESSAGES_PAGE = 50;
+
+export function listConversations(offset = 0): Promise<Conversation[]> {
+  return request<Conversation[]>(
+    `/api/conversations?limit=${CONVERSATIONS_PAGE}&offset=${offset}`,
+  );
 }
 
 export function createConversation(): Promise<Conversation> {
@@ -174,8 +179,11 @@ export async function deleteConversation(id: number): Promise<void> {
   await request<null>(`/api/conversations/${id}`, { method: 'DELETE' });
 }
 
-export function getMessages(id: number): Promise<Message[]> {
-  return request<Message[]>(`/api/conversations/${id}/messages`);
+// getMessages returns the newest page, or the page before a message id cursor.
+export function getMessages(id: number, before?: number): Promise<Message[]> {
+  const params = new URLSearchParams({ limit: String(MESSAGES_PAGE) });
+  if (before) params.set('before', String(before));
+  return request<Message[]>(`/api/conversations/${id}/messages?${params}`);
 }
 
 export interface SSEEvent {

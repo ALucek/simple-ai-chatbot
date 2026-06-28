@@ -51,6 +51,9 @@ describe('Sidebar', () => {
       rename,
       remove,
       patchConversation: vi.fn(),
+      loadingMore: false,
+      hasMore: false,
+      loadMore: vi.fn(),
     });
     render(<Sidebar />, { wrapper });
     expect(screen.getByText('One')).toBeInTheDocument();
@@ -72,6 +75,9 @@ describe('Sidebar', () => {
       rename,
       remove,
       patchConversation: vi.fn(),
+      loadingMore: false,
+      hasMore: false,
+      loadMore: vi.fn(),
     });
     render(<Sidebar />, { wrapper });
     await userEvent.click(screen.getByText('New conversation'));
@@ -88,6 +94,9 @@ describe('Sidebar', () => {
       rename,
       remove,
       patchConversation: vi.fn(),
+      loadingMore: false,
+      hasMore: false,
+      loadMore: vi.fn(),
     });
     render(<Sidebar />, { wrapper });
     const { container } = render(<Sidebar />, { wrapper });
