@@ -12,6 +12,14 @@ func setAllEnv(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret-at-least-32-bytes-long-xx")
 	t.Setenv("OPENROUTER_API_KEY", "test-openrouter-key")
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	// Clear optional vars so a developer's .env can't leak into default assertions.
+	for _, k := range []string{
+		"OPENROUTER_MODEL", "SYSTEM_PROMPT", "ALLOWED_ORIGIN", "OPENROUTER_BASE_URL",
+		"LOG_LEVEL", "DATABASE_URL", "TOKEN_BUDGET_DAILY", "OWNER_EMAIL",
+		"GOOGLE_AUTH_FAKE", "SIGNUP_OPEN",
+	} {
+		t.Setenv(k, "")
+	}
 }
 
 func TestLoadConfig_HasJWTSecret(t *testing.T) {
