@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -61,11 +60,6 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "pool: %v\n", err)
 		os.Exit(1)
 	}
-	// Signup hits real DNS in production; stub it so the suite is hermetic.
-	lookupMX = func(context.Context, string) ([]*net.MX, error) {
-		return []*net.MX{{Host: "mx.test.", Pref: 10}}, nil
-	}
-
 	code := m.Run()
 
 	testPool.Close()
@@ -101,31 +95,26 @@ func newTestMux(client *openRouterClient) http.Handler {
 
 // newTestMuxBudget builds the router with an explicit daily token budget.
 func newTestMuxBudget(client *openRouterClient, budget int) http.Handler {
-	auth := &Auth{pool: testPool, secret: testSecret}
+	auth := &Auth{pool: testPool, secret: testSecret, verify: fakeGoogleVerifier()}
 	chat := &Chat{pool: testPool, llm: client, systemPrompt: testSystemPrompt, tokenBudget: budget}
 	check := func(ctx context.Context) error { return Healthy(ctx, testPool) }
 	return newMux(check, auth, chat)
 }
 
-// signup registers a user through the mux and returns its access token and id.
-func signup(t *testing.T, mux http.Handler, email string) (token string, userID int64) {
+// signup seeds a user directly and returns a freshly minted access token + id.
+func signup(t *testing.T, _ http.Handler, email string) (token string, userID int64) {
 	t.Helper()
-	rec := do(t, mux, http.MethodPost, "/api/signup", "",
-		map[string]string{"email": email, "password": "password123"})
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("signup %s: want 201, got %d (%s)", email, rec.Code, rec.Body)
-	}
-	var out struct {
-		AccessToken string `json:"access_token"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
-		t.Fatalf("signup decode: %v", err)
-	}
-	uid, err := parseAccessToken(testSecret, out.AccessToken)
+	err := testPool.QueryRow(context.Background(),
+		`insert into users (google_sub, email) values ($1, $2) returning id`,
+		"sub:"+email, normalizeEmail(email)).Scan(&userID)
 	if err != nil {
-		t.Fatalf("parse token: %v", err)
+		t.Fatalf("seed user %s: %v", email, err)
 	}
-	return out.AccessToken, uid
+	token, err = mintAccessToken(testSecret, userID, time.Now())
+	if err != nil {
+		t.Fatalf("mint token: %v", err)
+	}
+	return token, userID
 }
 
 // do sends a request through the mux; body is JSON-encoded when non-nil.

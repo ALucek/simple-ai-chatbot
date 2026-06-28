@@ -29,7 +29,7 @@ func TestWithCORS_PreflightShortCircuits(t *testing.T) {
 		called = true
 	}))
 	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequest(http.MethodOptions, "/api/login", nil))
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodOptions, "/api/google", nil))
 
 	if called {
 		t.Fatal("preflight OPTIONS must not reach the wrapped handler")

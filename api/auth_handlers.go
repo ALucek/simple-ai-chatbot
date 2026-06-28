@@ -2,99 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const refreshTokenTTL = 30 * 24 * time.Hour
-
-type credentials struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func (a *Auth) Signup(w http.ResponseWriter, r *http.Request) {
-	var c credentials
-	if !decodeJSON(w, r, &c) {
-		return
-	}
-	if c.Email == "" || c.Password == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email and password required"})
-		return
-	}
-	c.Email = normalizeEmail(c.Email)
-	if err := checkEmailDeliverable(r.Context(), c.Email); err != nil {
-		switch {
-		case errors.Is(err, errEmailUnverifiable):
-			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "could not verify email, please try again"})
-		case errors.Is(err, errEmailUndeliverable):
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "email domain can't receive mail"})
-		default:
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid email"})
-		}
-		return
-	}
-	if len(c.Password) > maxPasswordBytes {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "password too long"})
-		return
-	}
-	if len(c.Password) < minPasswordLen {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "password too short"})
-		return
-	}
-	hash, err := hashPassword(c.Password)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not hash password"})
-		return
-	}
-	var userID int64
-	err = a.pool.QueryRow(r.Context(),
-		`insert into users (email, password_hash) values ($1, $2) returning id`,
-		c.Email, hash).Scan(&userID)
-	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" { // unique_violation
-			writeJSON(w, http.StatusConflict, map[string]string{"error": "email already registered"})
-			return
-		}
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not create user"})
-		return
-	}
-	family, err := newFamilyID()
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not start session"})
-		return
-	}
-	a.issueTokens(w, r, userID, family, http.StatusCreated)
-}
-
-func (a *Auth) Login(w http.ResponseWriter, r *http.Request) {
-	var c credentials
-	if !decodeJSON(w, r, &c) {
-		return
-	}
-	c.Email = normalizeEmail(c.Email)
-	var userID int64
-	var hash string
-	err := a.pool.QueryRow(r.Context(),
-		`select id, password_hash from users where email = $1`, c.Email).Scan(&userID, &hash)
-	if err != nil {
-		hash = dummyHash // compare anyway, so timing doesn't reveal existence
-	}
-	if checkPassword(hash, c.Password) != nil || err != nil {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
-		return
-	}
-	family, ferr := newFamilyID()
-	if ferr != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not start session"})
-		return
-	}
-	a.issueTokens(w, r, userID, family, http.StatusOK)
-}
 
 func (a *Auth) Refresh(w http.ResponseWriter, r *http.Request) {
 	var body struct {

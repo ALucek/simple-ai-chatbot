@@ -13,8 +13,8 @@ func TestRateLimit_CredentialsPerIP(t *testing.T) {
 	// All requests share httptest's default RemoteAddr → one IP bucket.
 	var last int
 	for i := 0; i < authRateBurst+1; i++ {
-		rec := do(t, mux, http.MethodPost, "/api/login", "",
-			map[string]string{"email": "x@x.com", "password": "nope"})
+		rec := do(t, mux, http.MethodPost, "/api/google", "",
+			map[string]string{"id_token": "nope"})
 		last = rec.Code
 	}
 	if last != http.StatusTooManyRequests {

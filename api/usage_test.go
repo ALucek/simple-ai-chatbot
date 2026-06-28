@@ -14,7 +14,7 @@ func TestUsage_RecordAndSumWithinWindow(t *testing.T) {
 
 	var uid int64
 	if err := testPool.QueryRow(ctx,
-		`insert into users (email, password_hash) values ('u@x.com', 'x') returning id`).
+		`insert into users (google_sub, email) values ('sub:u@x.com', 'u@x.com') returning id`).
 		Scan(&uid); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestUsage_SurvivesConversationDelete(t *testing.T) {
 
 	var uid int64
 	if err := testPool.QueryRow(ctx,
-		`insert into users (email, password_hash) values ('u@x.com', 'x') returning id`).
+		`insert into users (google_sub, email) values ('sub:u@x.com', 'u@x.com') returning id`).
 		Scan(&uid); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}

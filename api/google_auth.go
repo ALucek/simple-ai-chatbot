@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"strings"
 
 	"google.golang.org/api/idtoken"
@@ -55,4 +56,38 @@ func selectGoogleVerifier(cfg Config) googleVerifier {
 		return fakeGoogleVerifier()
 	}
 	return realGoogleVerifier(cfg.GoogleClientID)
+}
+
+// Google verifies a Google ID token, upserts the user, and issues a session.
+func (a *Auth) Google(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		IDToken string `json:"id_token"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.IDToken == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id_token required"})
+		return
+	}
+	claims, err := a.verify(r.Context(), body.IDToken)
+	if err != nil || !claims.EmailVerified || claims.Email == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid google token"})
+		return
+	}
+	var userID int64
+	err = a.pool.QueryRow(r.Context(),
+		`insert into users (google_sub, email) values ($1, $2)
+		 on conflict (google_sub) do update set email = excluded.email
+		 returning id`, claims.Sub, normalizeEmail(claims.Email)).Scan(&userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not create user"})
+		return
+	}
+	family, err := newFamilyID()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not start session"})
+		return
+	}
+	a.issueTokens(w, r, userID, family, http.StatusOK)
 }

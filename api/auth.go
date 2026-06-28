@@ -5,18 +5,14 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"net/mail"
 	"strconv"
 	"strings"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Auth groups the auth handlers and middleware with their dependencies.
@@ -31,33 +27,6 @@ type ctxKey string
 const userIDKey ctxKey = "userID"
 
 const accessTokenTTL = 15 * time.Minute
-const minPasswordLen = 8    // characters
-const maxPasswordBytes = 72 // bcrypt ignores bytes past 72; reject rather than truncate
-
-// lookupMX is a package-level seam so tests can stub DNS.
-var lookupMX = net.DefaultResolver.LookupMX
-
-var (
-	errEmailInvalid       = errors.New("invalid email")
-	errEmailUndeliverable = errors.New("email domain can't receive mail")
-	errEmailUnverifiable  = errors.New("could not verify email")
-)
-
-const mxLookupTimeout = 3 * time.Second
-
-// hashPassword returns a bcrypt hash of the plaintext password.
-func hashPassword(plain string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
-	}
-	return string(b), nil
-}
-
-// checkPassword reports nil if plain matches the stored bcrypt hash.
-func checkPassword(hash, plain string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(plain))
-}
 
 // mintAccessToken returns a signed HS256 JWT for the user.
 func mintAccessToken(secret []byte, userID int64, now time.Time) (string, error) {
@@ -129,17 +98,6 @@ func userIDFromContext(ctx context.Context) (int64, bool) {
 	return id, ok
 }
 
-// dummyHash is compared against when the email is unknown
-var dummyHash = mustHash("constant-time-placeholder")
-
-func mustHash(plain string) string {
-	h, err := hashPassword(plain)
-	if err != nil {
-		panic(err)
-	}
-	return h
-}
-
 // normalizeEmail lowercases and trims so email comparison is case-insensitive.
 func normalizeEmail(s string) string {
 	return strings.ToLower(strings.TrimSpace(s))
@@ -151,27 +109,4 @@ func newFamilyID() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
-}
-
-func checkEmailDeliverable(ctx context.Context, email string) error {
-	addr, err := mail.ParseAddress(email)
-	if err != nil {
-		return errEmailInvalid
-	}
-	at := strings.LastIndex(addr.Address, "@")
-	if at < 0 || at == len(addr.Address)-1 {
-		return errEmailInvalid
-	}
-	domain := addr.Address[at+1:]
-
-	ctx, cancel := context.WithTimeout(ctx, mxLookupTimeout)
-	defer cancel()
-	records, err := lookupMX(ctx, domain)
-	if err != nil {
-		return errEmailUnverifiable
-	}
-	if len(records) == 0 {
-		return errEmailUndeliverable
-	}
-	return nil
 }
