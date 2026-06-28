@@ -45,6 +45,71 @@ func TestConversations_ListScoped(t *testing.T) {
 	}
 }
 
+func TestConversations_Paginated(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	ta, _ := signup(t, mux, "p@x.com")
+	for i := 0; i < 3; i++ {
+		createConversation(t, mux, ta)
+	}
+
+	// limit caps the page; offset walks further back.
+	var page, rest []map[string]any
+	json.Unmarshal(do(t, mux, http.MethodGet, "/api/conversations?limit=2", ta, nil).Body.Bytes(), &page)
+	json.Unmarshal(do(t, mux, http.MethodGet, "/api/conversations?limit=2&offset=2", ta, nil).Body.Bytes(), &rest)
+	if len(page) != 2 {
+		t.Fatalf("first page: want 2, got %d", len(page))
+	}
+	if len(rest) != 1 {
+		t.Fatalf("second page: want 1, got %d", len(rest))
+	}
+	if page[0]["id"] == rest[0]["id"] {
+		t.Fatal("pages overlap")
+	}
+}
+
+// seedMessages inserts n user messages into a conversation and returns their ids (ascending).
+func seedMessages(t *testing.T, cid int64, n int) []int64 {
+	t.Helper()
+	ids := make([]int64, 0, n)
+	for i := 0; i < n; i++ {
+		var mid int64
+		if err := testPool.QueryRow(context.Background(),
+			`insert into messages (conversation_id, role, content) values ($1,'user',$2) returning id`,
+			cid, fmt.Sprintf("m%d", i)).Scan(&mid); err != nil {
+			t.Fatalf("seed message: %v", err)
+		}
+		ids = append(ids, mid)
+	}
+	return ids
+}
+
+func TestMessages_KeysetPagination(t *testing.T) {
+	resetDB(t)
+	mux := newTestMux(nil)
+	ta, _ := signup(t, mux, "k@x.com")
+	cid := createConversation(t, mux, ta)
+	ids := seedMessages(t, cid, 5) // ascending ids
+
+	decode := func(path string) []message {
+		var out []message
+		json.Unmarshal(do(t, mux, http.MethodGet, path, ta, nil).Body.Bytes(), &out)
+		return out
+	}
+
+	// Newest page (limit 2) returns the last two, oldest-first.
+	newest := decode(fmt.Sprintf("/api/conversations/%d/messages?limit=2", cid))
+	if len(newest) != 2 || newest[0].ID != ids[3] || newest[1].ID != ids[4] {
+		t.Fatalf("newest page wrong: %+v", newest)
+	}
+
+	// Older page before the newest page's first id, still oldest-first.
+	older := decode(fmt.Sprintf("/api/conversations/%d/messages?limit=2&before=%d", cid, ids[3]))
+	if len(older) != 2 || older[0].ID != ids[1] || older[1].ID != ids[2] {
+		t.Fatalf("older page wrong: %+v", older)
+	}
+}
+
 func TestMessages_OwnedEmpty(t *testing.T) {
 	resetDB(t)
 	mux := newTestMux(nil)

@@ -38,12 +38,37 @@ type message struct {
 
 const maxMessageChars = 8000
 
-// List returns the caller's conversations, newest activity first.
+const (
+	defaultConversationPage = 30
+	maxConversationPage     = 100
+	defaultMessagePage      = 50
+	maxMessagePage          = 100
+)
+
+// queryInt reads a query param as an int clamped to [min,max], or def when absent/invalid.
+func queryInt(r *http.Request, name string, def, min, max int) int {
+	n, err := strconv.Atoi(r.URL.Query().Get(name))
+	if err != nil {
+		return def
+	}
+	if n < min {
+		return min
+	}
+	if n > max {
+		return max
+	}
+	return n
+}
+
+// List returns the caller's conversations, newest activity first (paginated).
 func (c *Chat) List(w http.ResponseWriter, r *http.Request) {
 	userID, _ := userIDFromContext(r.Context())
+	limit := queryInt(r, "limit", defaultConversationPage, 1, maxConversationPage)
+	offset := queryInt(r, "offset", 0, 0, 1_000_000)
 	rows, err := c.pool.Query(r.Context(),
 		`select id, coalesce(title,''), created_at, updated_at
-		 from conversations where user_id = $1 order by updated_at desc`, userID)
+		 from conversations where user_id = $1
+		 order by updated_at desc limit $2 offset $3`, userID, limit, offset)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not list conversations"})
 		return
@@ -82,7 +107,7 @@ func conversationID(r *http.Request) (int64, error) {
 	return strconv.ParseInt(r.PathValue("id"), 10, 64)
 }
 
-// Messages returns one conversation's messages, oldest first.
+// Messages returns a conversation's messages oldest-first; newest page, older via ?before=<id>.
 func (c *Chat) Messages(w http.ResponseWriter, r *http.Request) {
 	userID, _ := userIDFromContext(r.Context())
 	id, err := conversationID(r)
@@ -105,9 +130,20 @@ func (c *Chat) Messages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := c.pool.Query(r.Context(),
-		`select id, role, content, created_at from messages
-		 where conversation_id = $1 order by id`, id)
+	limit := queryInt(r, "limit", defaultMessagePage, 1, maxMessagePage)
+	before, _ := strconv.ParseInt(r.URL.Query().Get("before"), 10, 64)
+
+	// Fetch newest-first, then reverse to oldest-first for display.
+	q := `select id, role, content, created_at from messages where conversation_id = $1`
+	args := []any{id}
+	if before > 0 {
+		q += ` and id < $2 order by id desc limit $3`
+		args = append(args, before, limit)
+	} else {
+		q += ` order by id desc limit $2`
+		args = append(args, limit)
+	}
+	rows, err := c.pool.Query(r.Context(), q, args...)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "could not load messages"})
 		return
@@ -122,6 +158,9 @@ func (c *Chat) Messages(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		msgs = append(msgs, m)
+	}
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
 	}
 	writeJSON(w, http.StatusOK, msgs)
 }
