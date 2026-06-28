@@ -30,7 +30,7 @@ export function Composer({
   }
 
   return (
-    <div className="border-border bg-surface flex h-[var(--bottombar-h)] items-center border-t px-3">
+    <div className="border-border bg-surface flex h-[calc(var(--bottombar-h)+env(safe-area-inset-bottom,0px))] items-center border-t px-3 pb-[env(safe-area-inset-bottom,0px)]">
       <div className="mx-auto flex w-full max-w-2xl items-center gap-2">
         <Textarea
           value={text}
@@ -39,7 +39,7 @@ export function Composer({
           disabled={sending}
           rows={1}
           placeholder="Send a message…"
-          className="flex-1"
+          className="flex-1 text-base sm:text-sm"
         />
         {sending ? (
           <Button type="button" variant="ghost" onClick={onStop}>
