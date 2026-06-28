@@ -282,6 +282,7 @@ func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
 		flusher.Flush()
 	})
 	if err != nil {
+		slog.ErrorContext(r.Context(), "stream", "err", err)
 		writeSSE(w, "error", map[string]string{"error": "stream failed"})
 		flusher.Flush()
 		return
@@ -292,6 +293,7 @@ func (c *Chat) Send(w http.ResponseWriter, r *http.Request) {
 	if err := c.pool.QueryRow(r.Context(),
 		`insert into messages (conversation_id, role, content) values ($1, 'assistant', $2) returning id`,
 		id, reply.String()).Scan(&msgID); err != nil {
+		slog.ErrorContext(r.Context(), "save reply", "err", err)
 		writeSSE(w, "error", map[string]string{"error": "could not save reply"})
 		flusher.Flush()
 		return
