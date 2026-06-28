@@ -31,6 +31,7 @@ export default function LoginPage() {
   const { status, loginWithGoogle } = useAuth();
   const router = useRouter();
   const mount = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -39,6 +40,9 @@ export default function LoginPage() {
   }, [status, router]);
 
   useEffect(() => {
+    // GSI must initialize once; guard against StrictMode and provider re-renders.
+    if (initialized.current) return;
+    initialized.current = true;
     function init() {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       if (!window.google || !mount.current || !clientId) return;
