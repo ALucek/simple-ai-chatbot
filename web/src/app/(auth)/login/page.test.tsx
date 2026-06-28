@@ -45,11 +45,11 @@ describe('LoginPage', () => {
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
       'href',
-      'https://lucek.ai/terms',
+      '/terms',
     );
     expect(
       screen.getByRole('link', { name: 'Privacy Policy' }),
-    ).toHaveAttribute('href', 'https://lucek.ai/privacy');
+    ).toHaveAttribute('href', '/privacy');
   });
 
   it('exchanges the Google credential but waits for authed status to redirect', async () => {
