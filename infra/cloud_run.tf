@@ -183,7 +183,7 @@ resource "google_cloud_run_v2_job" "migrate" {
 
       containers {
         image   = local.api_image
-        command = ["./api", "migrate"]
+        command = ["/server", "migrate"]
 
         env {
           name  = "DB_USER"
