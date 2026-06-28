@@ -47,6 +47,9 @@ func TestSend_StreamsAndPersists(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", rec.Code)
 	}
+	if got := rec.Header().Get("X-Accel-Buffering"); got != "no" {
+		t.Fatalf("want X-Accel-Buffering: no, got %q", got)
+	}
 	body := rec.Body.String()
 	if !strings.Contains(body, "event: delta") || !strings.Contains(body, `"text":"Hello"`) {
 		t.Fatalf("missing delta frames: %s", body)
