@@ -53,6 +53,12 @@ resource "google_compute_url_map" "lb" {
       paths   = ["/api", "/api/*"]
       service = google_compute_backend_service.api.id
     }
+
+    # api+db health, for the external uptime check
+    path_rule {
+      paths   = ["/readyz"]
+      service = google_compute_backend_service.api.id
+    }
   }
 }
 
