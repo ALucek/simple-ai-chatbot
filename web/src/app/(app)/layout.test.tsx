@@ -136,4 +136,18 @@ describe('AppLayout guard', () => {
     const shell = screen.getByTestId('app-shell');
     expect(shell.className).toContain('h-[var(--app-height,100dvh)]');
   });
+
+  it('sizes the drawer and backdrop to the visual viewport', () => {
+    vi.mocked(useAuth).mockReturnValue(authValue('authed'));
+    render(
+      <AppLayout>
+        <div>secret</div>
+      </AppLayout>,
+    );
+    const drawer = screen.getByText('sidebar').parentElement as HTMLElement;
+    expect(drawer.className).toContain('h-[var(--app-height,100dvh)]');
+    expect(screen.getByTestId('backdrop').className).toContain(
+      'h-[var(--app-height,100dvh)]',
+    );
+  });
 });
