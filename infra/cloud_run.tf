@@ -163,6 +163,67 @@ resource "google_cloud_run_v2_service" "api" {
   ]
 }
 
+resource "google_cloud_run_v2_job" "migrate" {
+  name                = "chat-migrate"
+  location            = var.region
+  deletion_protection = false
+
+  template {
+    template {
+      service_account = google_service_account.api.email
+      timeout         = "600s"
+      max_retries     = 0
+
+      volumes {
+        name = "cloudsql"
+        cloud_sql_instance {
+          instances = [google_sql_database_instance.chat.connection_name]
+        }
+      }
+
+      containers {
+        image   = local.api_image
+        command = ["./api", "migrate"]
+
+        env {
+          name  = "DB_USER"
+          value = "app"
+        }
+        env {
+          name  = "DB_NAME"
+          value = "chat"
+        }
+        env {
+          name  = "DB_PORT"
+          value = "5432"
+        }
+        env {
+          name  = "DB_HOST"
+          value = "/cloudsql/${google_sql_database_instance.chat.connection_name}"
+        }
+        env {
+          name = "DB_PASSWORD"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.app["db-password"].secret_id
+              version = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [template[0].template[0].containers[0].image]
+  }
+
+  depends_on = [
+    google_secret_manager_secret_iam_member.api_secrets,
+    google_project_iam_member.api_sql,
+  ]
+}
+
 resource "google_cloud_run_v2_service_iam_member" "web_public" {
   name     = google_cloud_run_v2_service.web.name
   location = var.region
