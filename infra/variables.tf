@@ -8,3 +8,9 @@ variable "region" {
   description = "Region for regional resources."
   default     = "us-central1"
 }
+
+variable "db_tier" {
+  type        = string
+  description = "Cloud SQL machine tier"
+  default     = "db-f1-micro"
+}
