@@ -31,6 +31,9 @@ services:
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL}
       ALLOWED_ORIGIN: ${ALLOWED_ORIGIN}
       SYSTEM_PROMPT: ${SYSTEM_PROMPT}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      OWNER_EMAIL: ${OWNER_EMAIL:-}
+      SIGNUP_OPEN: ${SIGNUP_OPEN:-}
     ports:
       - "${PORT:-8080}:${PORT:-8080}"
     depends_on:
@@ -42,6 +45,7 @@ services:
       context: ./web
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     image: simple-ai-chatbot-web:local
     ports:
       - "3000:3000"

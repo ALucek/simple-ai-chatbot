@@ -5,9 +5,11 @@ RUN npm install -g pnpm@11.8.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
-# NEXT_PUBLIC_* is baked at build time, so the API URL is a build-arg.
+# NEXT_PUBLIC_* is baked at build time, so these are build-args.
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 RUN pnpm build
 
 # ---- runtime ----
