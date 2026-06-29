@@ -58,7 +58,7 @@ func main() {
 	llm := &openRouterClient{key: cfg.OpenRouterKey, model: cfg.Model, baseURL: cfg.OpenRouterBaseURL, http: newLLMHTTPClient()}
 	chat := &Chat{pool: pool, llm: llm, systemPrompt: cfg.SystemPrompt, tokenBudget: cfg.TokenBudgetDaily, ownerEmail: normalizeEmail(cfg.OwnerEmail)}
 
-	mux := newMux(check, auth, chat, cfg.TrustProxy)
+	mux := newMux(check, auth, chat)
 
 	handler := withRequestID(withLogging(withRecover(withSecurityHeaders(withCORS(cfg.AllowedOrigin, withMaxBody(mux))))))
 	server := newServer(":"+cfg.Port, handler)
@@ -142,12 +142,10 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 }
 
 // newMux registers every route.
-func newMux(check func(context.Context) error, auth *Auth, chat *Chat, trustProxy bool) *http.ServeMux {
+func newMux(check func(context.Context) error, auth *Auth, chat *Chat) *http.ServeMux {
 	protect := func(h http.HandlerFunc) http.Handler { return auth.Middleware(http.HandlerFunc(h)) }
 
-	authLimiter := newLimiter(authRatePerMin, authRateBurst)
 	chatLimiter := newLimiter(chatRatePerMin, chatRateBurst)
-	limitIP := authLimiter.middleware(func(r *http.Request) string { return clientIP(r, trustProxy) })
 	limitUser := chatLimiter.middleware(func(r *http.Request) string {
 		uid, _ := userIDFromContext(r.Context())
 		return strconv.FormatInt(uid, 10)
@@ -156,8 +154,8 @@ func newMux(check func(context.Context) error, auth *Auth, chat *Chat, trustProx
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /livez", liveHandler())
 	mux.HandleFunc("GET /readyz", readyHandler(check))
-	mux.Handle("POST /api/google", limitIP(http.HandlerFunc(auth.Google)))
-	mux.Handle("POST /api/refresh", limitIP(http.HandlerFunc(auth.Refresh)))
+	mux.Handle("POST /api/google", http.HandlerFunc(auth.Google))
+	mux.Handle("POST /api/refresh", http.HandlerFunc(auth.Refresh))
 	mux.HandleFunc("POST /api/logout", auth.Logout)
 	mux.Handle("GET /api/me", auth.Middleware(http.HandlerFunc(auth.Me)))
 	mux.Handle("GET /api/conversations", protect(chat.List))

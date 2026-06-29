@@ -1,17 +1,13 @@
 package main
 
 import (
-	"net"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	authRatePerMin = 10
-	authRateBurst  = 10
 	chatRatePerMin = 20
 	chatRateBurst  = 20
 )
@@ -104,22 +100,4 @@ func (l *limiter) middleware(key func(*http.Request) string) func(http.Handler) 
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-// clientIP: real client IP; 2nd-from-right XFF behind a proxy (rest spoofable)
-func clientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-			parts := strings.Split(xff, ",")
-			if len(parts) >= 2 {
-				return strings.TrimSpace(parts[len(parts)-2])
-			}
-			return strings.TrimSpace(parts[len(parts)-1])
-		}
-	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

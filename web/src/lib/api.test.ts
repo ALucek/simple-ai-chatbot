@@ -92,6 +92,15 @@ describe('api client', () => {
 
     await expect(me()).rejects.toBeInstanceOf(ApiError);
   });
+
+  it('surfaces a friendly message on a 429', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse(429, {}));
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(me()).rejects.toMatchObject({
+      status: 429,
+      message: 'Too many requests — please wait a moment and try again.',
+    });
+  });
 });
 
 describe('conversation endpoints', () => {

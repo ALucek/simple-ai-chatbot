@@ -86,29 +86,3 @@ func TestLimiter_Middleware429WithRetryAfter(t *testing.T) {
 		t.Fatal("missing Retry-After header")
 	}
 }
-
-func TestClientIP_RemoteAddrWhenNotTrusted(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.RemoteAddr = "203.0.113.7:54321"
-	r.Header.Set("X-Forwarded-For", "1.2.3.4, 5.6.7.8")
-	if got := clientIP(r, false); got != "203.0.113.7" {
-		t.Fatalf("want 203.0.113.7, got %q", got)
-	}
-}
-
-func TestClientIP_SecondFromRightWhenTrusted(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.RemoteAddr = "10.0.0.1:443"
-	r.Header.Set("X-Forwarded-For", "9.9.9.9, 203.0.113.7, 10.0.0.1")
-	if got := clientIP(r, true); got != "203.0.113.7" {
-		t.Fatalf("want 203.0.113.7, got %q", got)
-	}
-}
-
-func TestClientIP_TrustedFallsBackWhenNoXFF(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	r.RemoteAddr = "203.0.113.7:54321"
-	if got := clientIP(r, true); got != "203.0.113.7" {
-		t.Fatalf("want 203.0.113.7, got %q", got)
-	}
-}

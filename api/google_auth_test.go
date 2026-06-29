@@ -108,7 +108,7 @@ func TestGoogle_SignupsClosedRejectsNewUser(t *testing.T) {
 	resetDB(t)
 	auth := &Auth{pool: testPool, secret: testSecret, verify: fakeGoogleVerifier(), exchange: fakeGoogleExchanger(), signupOpen: false}
 	chat := &Chat{pool: testPool, systemPrompt: testSystemPrompt, tokenBudget: testTokenBudget}
-	mux := newMux(func(ctx context.Context) error { return Healthy(ctx, testPool) }, auth, chat, false)
+	mux := newMux(func(ctx context.Context) error { return Healthy(ctx, testPool) }, auth, chat)
 
 	rec := do(t, mux, http.MethodPost, "/api/google", "", map[string]string{"code": "e2e:newbie@gmail.com"})
 	if rec.Code != http.StatusForbidden {
@@ -125,7 +125,7 @@ func TestGoogle_SignupsClosedAllowsExistingUser(t *testing.T) {
 	}
 	auth := &Auth{pool: testPool, secret: testSecret, verify: fakeGoogleVerifier(), exchange: fakeGoogleExchanger(), signupOpen: false}
 	chat := &Chat{pool: testPool, systemPrompt: testSystemPrompt, tokenBudget: testTokenBudget}
-	mux := newMux(func(ctx context.Context) error { return Healthy(ctx, testPool) }, auth, chat, false)
+	mux := newMux(func(ctx context.Context) error { return Healthy(ctx, testPool) }, auth, chat)
 
 	rec := do(t, mux, http.MethodPost, "/api/google", "", map[string]string{"code": "e2e:existing@gmail.com"})
 	if rec.Code != http.StatusOK {

@@ -95,6 +95,9 @@ async function request<T>(
 }
 
 async function errorMessage(res: Response): Promise<string> {
+  if (res.status === 429) {
+    return 'Too many requests — please wait a moment and try again.';
+  }
   try {
     const data = (await res.json()) as { error?: string };
     if (data.error) return data.error;

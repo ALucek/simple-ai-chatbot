@@ -6,22 +6,6 @@ import (
 	"testing"
 )
 
-func TestRateLimit_CredentialsPerIP(t *testing.T) {
-	resetDB(t)
-	mux := newTestMux(nil)
-
-	// All requests share httptest's default RemoteAddr → one IP bucket.
-	var last int
-	for i := 0; i < authRateBurst+1; i++ {
-		rec := do(t, mux, http.MethodPost, "/api/google", "",
-			map[string]string{"code": "nope"})
-		last = rec.Code
-	}
-	if last != http.StatusTooManyRequests {
-		t.Fatalf("want 429 after burst, got %d", last)
-	}
-}
-
 func TestRateLimit_ChatPerUser(t *testing.T) {
 	resetDB(t)
 	client := fakeOpenRouter(t, http.StatusOK, deltaFrame("hi"), "data: [DONE]\n\n")
