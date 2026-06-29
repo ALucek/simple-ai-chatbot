@@ -48,7 +48,7 @@ func LoadConfig() (Config, error) {
 		OpenRouterBaseURL:  getenvDefault("OPENROUTER_BASE_URL", openRouterURL),
 		LogLevel:           getenvDefault("LOG_LEVEL", "info"),
 		DatabaseURL:        os.Getenv("DATABASE_URL"),
-		TokenBudgetDaily:   getenvInt("TOKEN_BUDGET_DAILY", 8192),
+		TokenBudgetDaily:   getenvInt("TOKEN_BUDGET_DAILY", 128000),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		OwnerEmail:         os.Getenv("OWNER_EMAIL"),
