@@ -42,6 +42,7 @@ describe('LoginPage', () => {
     render(<LoginPage />);
     expect(screen.getByTestId('google-signin')).toBeInTheDocument();
     expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.queryByTestId('google-signin-skeleton')).toBeNull();
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
       'href',
@@ -50,6 +51,13 @@ describe('LoginPage', () => {
     expect(
       screen.getByRole('link', { name: 'Privacy Policy' }),
     ).toHaveAttribute('href', '/privacy');
+  });
+
+  it('shows a skeleton until the Google button renders', () => {
+    delete (window as unknown as { google?: unknown }).google;
+    render(<LoginPage />);
+    expect(screen.getByTestId('google-signin-skeleton')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('exchanges the Google credential but waits for authed status to redirect', async () => {

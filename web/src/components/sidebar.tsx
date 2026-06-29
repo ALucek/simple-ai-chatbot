@@ -7,29 +7,17 @@ import { ConversationItem } from './conversation-item';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from './ui/skeleton';
 import { UsageMeter } from './usage-meter';
-import { useToast } from '@/lib/toast-context';
 
 export function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { conversations, loading, error, create, rename, remove } =
+  const { conversations, loading, error, rename, remove } =
     useConversationsContext();
-
-  const { toast } = useToast();
-
-  async function onNew() {
-    try {
-      const convo = await create();
-      router.push(`/c/${convo.id}`);
-    } catch {
-      toast('Could not create conversation');
-    }
-  }
 
   return (
     <aside className="border-border bg-surface flex h-full w-64 flex-col border-r">
       <div className="border-border border-b p-3 pl-[52px]">
-        <Button onClick={onNew} className="w-full">
+        <Button onClick={() => router.push('/')} className="w-full">
           New conversation
         </Button>
       </div>

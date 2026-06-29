@@ -35,6 +35,7 @@ interface MessagesValue {
   byId: Record<number, ConvState>;
   load: (id: number) => void;
   send: (id: number, content: string) => Promise<void>;
+  sendNew: (content: string) => Promise<number>;
   stop: (id: number) => void;
 }
 
@@ -42,13 +43,18 @@ const MessagesContext = createContext<MessagesValue | null>(null);
 
 export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const [byId, setById] = useState<Record<number, ConvState>>({});
-  const { patchConversation } = useConversationsContext();
+  const { patchConversation, create } = useConversationsContext();
 
   // Refs keep load/send/stop referentially stable (so the consumer effect only
   // re-runs on id change) while still reaching the latest patchConversation.
   const patchConvRef = useRef(patchConversation);
   useEffect(() => {
     patchConvRef.current = patchConversation;
+  });
+
+  const createRef = useRef(create);
+  useEffect(() => {
+    createRef.current = create;
   });
 
   const { refresh: refreshUsage } = useUsage();
@@ -158,6 +164,27 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     [patch],
   );
 
+  const sendNew = useCallback(
+    async (content: string): Promise<number> => {
+      const convo = await createRef.current();
+      // Mark loaded so a later /c/[id] mount won't refetch over the live stream.
+      loaded.current.add(convo.id);
+      setById((prev) => ({
+        ...prev,
+        [convo.id]: {
+          messages: [],
+          loading: false,
+          error: null,
+          notFound: false,
+          sending: false,
+        },
+      }));
+      void send(convo.id, content);
+      return convo.id;
+    },
+    [send],
+  );
+
   const stop = useCallback(
     (id: number) => {
       controllers.current[id]?.abort();
@@ -172,8 +199,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ byId, load, send, stop }),
-    [byId, load, send, stop],
+    () => ({ byId, load, send, sendNew, stop }),
+    [byId, load, send, sendNew, stop],
   );
 
   return (
@@ -214,4 +241,11 @@ export function useMessages(id: number): UseMessages {
     send: (content: string) => ctx.send(id, content),
     stop: () => ctx.stop(id),
   };
+}
+
+export function useSendNew(): (content: string) => Promise<number> {
+  const ctx = useContext(MessagesContext);
+  if (!ctx)
+    throw new Error('useSendNew must be used within a MessagesProvider');
+  return ctx.sendNew;
 }
