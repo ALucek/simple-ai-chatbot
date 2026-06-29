@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import LoginPage from './page';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
@@ -30,7 +36,8 @@ beforeEach(() => {
           capturedCallback = cfg.callback;
         },
         renderButton: (el: HTMLElement) => {
-          el.appendChild(document.createElement('button'));
+          // Real GSI renders the button inside a cross-origin iframe.
+          el.appendChild(document.createElement('iframe'));
         },
       },
     },
@@ -38,10 +45,17 @@ beforeEach(() => {
 });
 
 describe('LoginPage', () => {
-  it('renders the mount point, button, and legal footer with no heading', () => {
+  it('reveals the button once its iframe loads, with a legal footer and no heading', () => {
     render(<LoginPage />);
     expect(screen.getByTestId('google-signin')).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeInTheDocument();
+    const iframe = screen
+      .getByTestId('google-signin')
+      .querySelector('iframe') as HTMLIFrameElement;
+    // skeleton stays until the GSI iframe finishes loading
+    expect(screen.getByTestId('google-signin-skeleton')).toBeInTheDocument();
+    act(() => {
+      fireEvent.load(iframe);
+    });
     expect(screen.queryByTestId('google-signin-skeleton')).toBeNull();
     expect(screen.queryByRole('heading')).toBeNull();
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
@@ -53,11 +67,10 @@ describe('LoginPage', () => {
     ).toHaveAttribute('href', '/privacy');
   });
 
-  it('shows a skeleton until the Google button renders', () => {
+  it('shows a skeleton until the Google script loads', () => {
     delete (window as unknown as { google?: unknown }).google;
     render(<LoginPage />);
     expect(screen.getByTestId('google-signin-skeleton')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('exchanges the Google credential but waits for authed status to redirect', async () => {

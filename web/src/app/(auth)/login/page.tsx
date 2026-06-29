@@ -46,6 +46,34 @@ export default function LoginPage() {
     // GSI must initialize once; guard against StrictMode and provider re-renders.
     if (initialized.current) return;
     initialized.current = true;
+
+    // GSI paints its button in a cross-origin iframe a beat after renderButton
+    // returns, then personalizes the text; hold the skeleton until it loads.
+    function revealWhenLoaded(el: HTMLElement) {
+      let observer: MutationObserver | null = null;
+      function reveal() {
+        clearTimeout(fallback);
+        observer?.disconnect();
+        setReady(true);
+      }
+      const fallback = setTimeout(reveal, 1500);
+      const attach = (iframe: HTMLIFrameElement) =>
+        iframe.addEventListener('load', reveal, { once: true });
+      const existing = el.querySelector('iframe');
+      if (existing) {
+        attach(existing);
+        return;
+      }
+      observer = new MutationObserver(() => {
+        const iframe = el.querySelector('iframe');
+        if (iframe) {
+          observer?.disconnect();
+          attach(iframe);
+        }
+      });
+      observer.observe(el, { childList: true, subtree: true });
+    }
+
     function init() {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       if (!window.google || !mount.current || !clientId) return;
@@ -68,7 +96,7 @@ export default function LoginPage() {
         size: 'large',
         width: 280,
       });
-      setReady(true);
+      revealWhenLoaded(mount.current);
     }
     if (window.google) {
       init();
