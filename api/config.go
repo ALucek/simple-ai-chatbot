@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // Config holds everything the app needs to run, read once from the environment.
@@ -75,6 +76,11 @@ func LoadConfig() (Config, error) {
 	// The real Google exchanger needs the client secret; fake auth doesn't.
 	if !cfg.GoogleAuthFake && cfg.GoogleClientSecret == "" {
 		return Config{}, fmt.Errorf("missing required env var: GOOGLE_CLIENT_SECRET")
+	}
+
+	// Fake auth is a total bypass; never allow it under TLS (production).
+	if cfg.GoogleAuthFake && strings.HasPrefix(cfg.AllowedOrigin, "https://") {
+		return Config{}, fmt.Errorf("GOOGLE_AUTH_FAKE must not be set when ALLOWED_ORIGIN is https")
 	}
 
 	// A too-short JWT_SECRET makes session tokens forgeable.

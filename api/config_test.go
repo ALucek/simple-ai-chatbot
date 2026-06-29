@@ -143,6 +143,24 @@ func TestLoadConfig_SignupsOpenWhenSet(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_FakeAuthRejectedUnderTLS(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_AUTH_FAKE", "1")
+	t.Setenv("ALLOWED_ORIGIN", "https://chat.lucek.ai")
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("expected an error for fake auth under https, got nil")
+	}
+}
+
+func TestLoadConfig_FakeAuthAllowedLocally(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_AUTH_FAKE", "1")
+	t.Setenv("ALLOWED_ORIGIN", "http://localhost:3000")
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("fake auth under http should be allowed, got %v", err)
+	}
+}
+
 func TestLoadConfig_OwnerAndFakeDefaults(t *testing.T) {
 	setAllEnv(t)
 	cfg, err := LoadConfig()
