@@ -1,0 +1,149 @@
+# ---- char cap (comment text > 80) ----
+id: comment-too-long-go
+language: go
+severity: error
+message: comment too long (>80) — keep it one short line
+rule:
+  all:
+    - { kind: comment, regex: '^.{81,}$' }
+    - not: { regex: 'https?://' }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^//(go:|nolint|export)' }
+---
+id: comment-too-long-typescript
+language: typescript
+severity: error
+message: comment too long (>80) — keep it one short line
+rule:
+  all:
+    - { kind: comment, regex: '^.{81,}$' }
+    - not: { regex: 'https?://' }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
+---
+id: comment-too-long-tsx
+language: tsx
+severity: error
+message: comment too long (>80) — keep it one short line
+rule:
+  all:
+    - { kind: comment, regex: '^.{81,}$' }
+    - not: { regex: 'https?://' }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
+---
+id: comment-too-long-javascript
+language: javascript
+severity: error
+message: comment too long (>80) — keep it one short line
+rule:
+  all:
+    - { kind: comment, regex: '^.{81,}$' }
+    - not: { regex: 'https?://' }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
+---
+id: comment-too-long-css
+language: css
+severity: error
+message: comment too long (>80) — keep it one short line
+rule:
+  all:
+    - { kind: comment, regex: '^.{81,}$' }
+    - not: { regex: 'https?://' }
+    - not: { regex: 'lint-ignore-comment' }
+# ---- multi-line block comments ----
+---
+id: multiline-comment-go
+language: go
+severity: error
+message: multi-line comment — split into one-line comments or shorten
+rule:
+  all:
+    - { kind: comment, regex: "\n" }
+    - not: { regex: 'lint-ignore-comment' }
+---
+id: multiline-comment-typescript
+language: typescript
+severity: error
+message: multi-line comment — split into one-line comments or shorten
+rule:
+  all:
+    - { kind: comment, regex: "\n" }
+    - not: { regex: 'lint-ignore-comment' }
+---
+id: multiline-comment-tsx
+language: tsx
+severity: error
+message: multi-line comment — split into one-line comments or shorten
+rule:
+  all:
+    - { kind: comment, regex: "\n" }
+    - not: { regex: 'lint-ignore-comment' }
+---
+id: multiline-comment-javascript
+language: javascript
+severity: error
+message: multi-line comment — split into one-line comments or shorten
+rule:
+  all:
+    - { kind: comment, regex: "\n" }
+    - not: { regex: 'lint-ignore-comment' }
+---
+id: multiline-comment-css
+language: css
+severity: error
+message: multi-line comment — split into one-line comments or shorten
+rule:
+  all:
+    - { kind: comment, regex: "\n" }
+    - not: { regex: 'lint-ignore-comment' }
+# ---- stacked line comments (2+ consecutive //) ----
+---
+id: stacked-comments-go
+language: go
+severity: error
+message: stacked comments — condense to one pointed line
+rule:
+  all:
+    - kind: comment
+      regex: '^//'
+      follows: { kind: comment, regex: '^//', stopBy: neighbor }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^//(go:|nolint|export)' }
+---
+id: stacked-comments-typescript
+language: typescript
+severity: error
+message: stacked comments — condense to one pointed line
+rule:
+  all:
+    - kind: comment
+      regex: '^//'
+      follows: { kind: comment, regex: '^//', stopBy: neighbor }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
+---
+id: stacked-comments-tsx
+language: tsx
+severity: error
+message: stacked comments — condense to one pointed line
+rule:
+  all:
+    - kind: comment
+      regex: '^//'
+      follows: { kind: comment, regex: '^//', stopBy: neighbor }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
+---
+id: stacked-comments-javascript
+language: javascript
+severity: error
+message: stacked comments — condense to one pointed line
+rule:
+  all:
+    - kind: comment
+      regex: '^//'
+      follows: { kind: comment, regex: '^//', stopBy: neighbor }
+    - not: { regex: 'lint-ignore-comment' }
+    - not: { regex: '^// ?(eslint-(disable|enable)|@ts-|prettier-ignore|biome-ignore|istanbul )' }
