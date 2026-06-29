@@ -7,7 +7,7 @@ globalThis.ResizeObserver = class {
   disconnect() {}
 };
 
-// Node's native localStorage shadows jsdom's and lacks clear(); use a simple in-memory store.
+// Node's localStorage shadows jsdom's and lacks clear(); use in-memory.
 class MemoryStorage {
   private store = new Map<string, string>();
   get length() {

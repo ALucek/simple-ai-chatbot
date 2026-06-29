@@ -1,6 +1,4 @@
-// Minimal stand-in for Google Identity Services, served in place of the real
-// GSI script during e2e. Implements only the OAuth2 code-client slice the
-// login page uses: requestCode() fires the callback with a sentinel code.
+// Minimal GSI stub for e2e: requestCode() fires callback with a sentinel code.
 window.google = {
   accounts: {
     oauth2: {

@@ -8,7 +8,7 @@ export function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const csp = buildCSP(API_URL, dev, nonce);
 
-  // Pass the nonce and policy on the request so Next stamps its own inline scripts.
+  // Pass nonce + policy on the request so Next stamps its inline scripts.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-nonce', nonce);
   requestHeaders.set('Content-Security-Policy', csp);

@@ -8,9 +8,7 @@ export function useMobileDrawer() {
   const pathname = usePathname();
   const [prevPathname, setPrevPathname] = useState(pathname);
 
-  // Close the drawer whenever navigation changes the route. Adjusting state
-  // during render (rather than in an effect) is React's recommended pattern for
-  // resetting state in response to a changed value.
+  // Close drawer on route change; adjust during render (React-recommended).
   if (pathname !== prevPathname) {
     setPrevPathname(pathname);
     setOpen(false);

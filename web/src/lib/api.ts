@@ -29,8 +29,7 @@ export function clearSession(): void {
   accessToken = null;
 }
 
-// refreshAccess exchanges the stored refresh token for a new access token.
-// Single-flight: concurrent callers share one in-flight request.
+// refreshAccess swaps the refresh token for an access token (single-flight).
 export function refreshAccess(): Promise<string | null> {
   if (!refreshing) {
     refreshing = doRefresh().finally(() => {
@@ -42,7 +41,7 @@ export function refreshAccess(): Promise<string | null> {
 
 let onUnauthorized: (() => void) | null = null;
 
-// setOnUnauthorized registers a callback fired when a mid-session refresh fails. Pass null to clear it.
+// setOnUnauthorized: callback for a failed mid-session refresh; null clears.
 export function setOnUnauthorized(fn: (() => void) | null): void {
   onUnauthorized = fn;
 }

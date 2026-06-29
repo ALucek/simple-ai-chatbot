@@ -65,7 +65,7 @@ describe('LoginPage', () => {
     expect(capturedCallback).toBeTypeOf('function');
     await act(async () => capturedCallback!({ code: 'tok-123' }));
     expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
-    // Status is still 'anon' until the provider commits the session; no redirect yet.
+    // Still 'anon' until the provider commits the session; no redirect yet.
     expect(replace).not.toHaveBeenCalled();
     // Provider flips to authed → the effect redirects home.
     vi.mocked(useAuth).mockReturnValue({

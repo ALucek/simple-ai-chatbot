@@ -102,7 +102,7 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('status')).toHaveTextContent('authed'),
     );
 
-    // Grab the handler AuthProvider registered, and fire it (simulates a failed refresh).
+    // Grab the handler AuthProvider registered and fire it (failed refresh).
     const handler = vi.mocked(api.setOnUnauthorized).mock.calls.at(-1)?.[0] as
       | (() => void)
       | undefined;

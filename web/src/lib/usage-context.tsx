@@ -24,8 +24,7 @@ export function UsageProvider({ children }: { children: React.ReactNode }) {
     getUsage()
       .then((u) => setUsage(u))
       .catch(() => {
-        // Keep the last-known value (or null). A usage hiccup must never
-        // render as "0% used."
+        // Keep the last-known value; a usage hiccup must never show "0% used."
       });
   }, []);
 

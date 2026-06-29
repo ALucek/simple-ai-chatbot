@@ -45,8 +45,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const [byId, setById] = useState<Record<number, ConvState>>({});
   const { patchConversation, create } = useConversationsContext();
 
-  // Refs keep load/send/stop referentially stable (so the consumer effect only
-  // re-runs on id change) while still reaching the latest patchConversation.
+  // Refs keep load/send/stop stable (effect re-runs only on id change).
   const patchConvRef = useRef(patchConversation);
   useEffect(() => {
     patchConvRef.current = patchConversation;

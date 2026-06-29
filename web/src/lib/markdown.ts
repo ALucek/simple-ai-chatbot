@@ -3,10 +3,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 
-// Highlight first (adds <span class="hljs-*">), then sanitize last as the
-// security gate — extended to whitelist the highlight.js classes on code/span
-// so the highlight markup survives. Restricting to hljs*/language-* (not a
-// blanket className allow) keeps sanitization tight; a className can't execute.
+// Highlight then sanitize last (security gate); whitelist hljs*/language-*.
 const schema = {
   ...defaultSchema,
   attributes: {

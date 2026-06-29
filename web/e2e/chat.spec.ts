@@ -23,7 +23,7 @@ test('sign in with Google, send a message, stream a reply, persist on reload', a
   await page.getByRole('button', { name: 'Sign in with Google' }).click();
   await expect(page).toHaveURL('/');
 
-  // Draft new chat: sending creates the conversation, routes to /c/<id>, and streams.
+  // Draft new chat: sending creates the conversation, routes, and streams.
   await page.getByPlaceholder('Send a message…').fill(message);
   await page.getByRole('button', { name: 'Send' }).click();
   await expect(page).toHaveURL(/\/c\/\d+$/);

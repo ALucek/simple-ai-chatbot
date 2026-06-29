@@ -166,7 +166,7 @@
   padding: 6px 10px;
 }
 
-/* Syntax highlighting — lucek.ai's light palette, mapped to highlight.js classes */
+/* Syntax highlighting — lucek.ai light palette → highlight.js classes */
 .markdown .hljs {
   color: var(--color-fg);
 }

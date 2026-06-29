@@ -1,8 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import { remarkPlugins, rehypePlugins } from '@/lib/markdown';
 
-// Renders a trusted Markdown document (e.g. the legal pages) with the shared
-// remark/rehype pipeline and prose styling.
+// Renders a trusted Markdown doc (legal pages) via the shared pipeline.
 export function MarkdownDoc({ markdown }: { markdown: string }) {
   return (
     <div className="markdown text-fg text-sm">
