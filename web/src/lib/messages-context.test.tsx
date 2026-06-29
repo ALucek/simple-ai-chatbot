@@ -8,12 +8,13 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
-import { MessagesProvider, useMessages } from './messages-context';
+import { MessagesProvider, useMessages, useSendNew } from './messages-context';
 import * as api from './api';
 import { ApiError, type Message, type StreamHandlers } from './api';
 
-const { patchConversation } = vi.hoisted(() => ({
+const { patchConversation, create } = vi.hoisted(() => ({
   patchConversation: vi.fn(),
+  create: vi.fn(),
 }));
 
 vi.mock('./api', async (importOriginal) => {
@@ -21,7 +22,7 @@ vi.mock('./api', async (importOriginal) => {
   return { ...actual, getMessages: vi.fn(), sendMessage: vi.fn() };
 });
 vi.mock('./conversations-context', () => ({
-  useConversationsContext: () => ({ patchConversation }),
+  useConversationsContext: () => ({ patchConversation, create }),
 }));
 
 const { refreshUsage } = vi.hoisted(() => ({ refreshUsage: vi.fn() }));
@@ -39,6 +40,7 @@ beforeEach(() => {
   vi.mocked(api.getMessages).mockReset();
   vi.mocked(api.sendMessage).mockReset();
   patchConversation.mockReset();
+  create.mockReset();
   refreshUsage.mockReset();
 });
 
@@ -63,6 +65,29 @@ describe('useMessages (store)', () => {
     });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.notFound).toBe(true);
+  });
+
+  it('sendNew creates a conversation, returns its id, and starts the stream', async () => {
+    create.mockResolvedValue({
+      id: 5,
+      title: '',
+      created_at: 't',
+      updated_at: 't',
+    });
+    vi.mocked(api.sendMessage).mockResolvedValue(undefined);
+    const { result } = renderHook(() => useSendNew(), { wrapper });
+    let newId: number | undefined;
+    await act(async () => {
+      newId = await result.current('hello');
+    });
+    expect(create).toHaveBeenCalled();
+    expect(newId).toBe(5);
+    expect(api.sendMessage).toHaveBeenCalledWith(
+      5,
+      'hello',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('send appends optimistic user + assistant and streams deltas to done', async () => {

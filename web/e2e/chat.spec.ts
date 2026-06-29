@@ -23,13 +23,10 @@ test('sign in with Google, send a message, stream a reply, persist on reload', a
   await page.getByRole('button', { name: 'Sign in with Google' }).click();
   await expect(page).toHaveURL('/');
 
-  // Create a conversation.
-  await page.getByRole('button', { name: 'New conversation' }).click();
-  await expect(page).toHaveURL(/\/c\/\d+$/);
-
-  // Send a message; the stubbed reply streams in.
+  // Draft new chat: sending creates the conversation, routes to /c/<id>, and streams.
   await page.getByPlaceholder('Send a message…').fill(message);
   await page.getByRole('button', { name: 'Send' }).click();
+  await expect(page).toHaveURL(/\/c\/\d+$/);
   await expect(page.getByText('Hello from the stub.')).toBeVisible();
 
   // The first message names the conversation (first five words) in the sidebar.

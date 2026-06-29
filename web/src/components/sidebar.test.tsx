@@ -57,26 +57,19 @@ describe('Sidebar', () => {
     expect(screen.getByText('Two')).toBeInTheDocument();
   });
 
-  it('New conversation creates and navigates', async () => {
-    const create = vi.fn().mockResolvedValue({
-      id: 7,
-      title: '',
-      created_at: 't',
-      updated_at: 't',
-    });
+  it('New conversation navigates to a fresh draft', async () => {
     vi.mocked(useConversationsContext).mockReturnValue({
       conversations: [],
       loading: false,
       error: null,
-      create,
+      create: vi.fn(),
       rename,
       remove,
       patchConversation: vi.fn(),
     });
     render(<Sidebar />, { wrapper });
     await userEvent.click(screen.getByText('New conversation'));
-    expect(create).toHaveBeenCalled();
-    expect(push).toHaveBeenCalledWith('/c/7');
+    expect(push).toHaveBeenCalledWith('/');
   });
 
   it('shows the loading state', () => {
