@@ -10,9 +10,10 @@ export function useViewportHeight() {
 
     const update = () => {
       frame = 0;
-      // Pin the shell to the visual viewport: its height, shifted by iOS's offset.
+      // Clamp to the band below the offset so the shell never overshoots mid-animation.
       const root = document.documentElement.style;
-      root.setProperty('--app-height', `${vv.height}px`);
+      const height = Math.min(vv.height, window.innerHeight - vv.offsetTop);
+      root.setProperty('--app-height', `${height}px`);
       root.setProperty('--app-offset', `${vv.offsetTop}px`);
     };
     const schedule = () => {

@@ -86,6 +86,19 @@ describe('useViewportHeight', () => {
     ).toBe('60px');
   });
 
+  it('clamps --app-height to the band below the offset (no mid-animation overshoot)', () => {
+    // iOS transient: offset has jumped but height has not shrunk yet.
+    vi.stubGlobal('innerHeight', 500);
+    setVisualViewport(makeVisualViewport(500, 80));
+    renderHook(() => useViewportHeight());
+    expect(
+      document.documentElement.style.getPropertyValue('--app-height'),
+    ).toBe('420px');
+    expect(
+      document.documentElement.style.getPropertyValue('--app-offset'),
+    ).toBe('80px');
+  });
+
   it('removes its listeners on unmount', () => {
     const vv = makeVisualViewport(500);
     setVisualViewport(vv);
