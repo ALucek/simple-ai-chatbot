@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  render,
-  screen,
-  waitFor,
-  act,
-  fireEvent,
-} from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import LoginPage from './page';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
@@ -15,8 +10,8 @@ const loginWithGoogle = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 vi.mock('@/lib/auth-context');
 
-type GsiCallback = (r: { credential: string }) => void;
-let capturedCallback: GsiCallback | null = null;
+type CodeCallback = (r: { code: string }) => void;
+let capturedCallback: CodeCallback | null = null;
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -28,16 +23,16 @@ beforeEach(() => {
     loginWithGoogle,
     logout: vi.fn(),
   } as unknown as ReturnType<typeof useAuth>);
-  // Fake Google Identity Services: capture the callback, render a button.
+  // Fake Google Identity Services OAuth2 code client.
   (window as unknown as { google: unknown }).google = {
     accounts: {
-      id: {
-        initialize: (cfg: { callback: GsiCallback }) => {
+      oauth2: {
+        initCodeClient: (cfg: { callback: CodeCallback }) => {
           capturedCallback = cfg.callback;
-        },
-        renderButton: (el: HTMLElement) => {
-          // Real GSI renders the button inside a cross-origin iframe.
-          el.appendChild(document.createElement('iframe'));
+          return {
+            requestCode: () =>
+              capturedCallback?.({ code: 'e2e:test@gmail.com' }),
+          };
         },
       },
     },
@@ -45,19 +40,16 @@ beforeEach(() => {
 });
 
 describe('LoginPage', () => {
-  it('reveals the button once its iframe loads, with a legal footer and no heading', () => {
+  it('renders the button immediately and signs in on click', async () => {
+    loginWithGoogle.mockResolvedValue(undefined);
     render(<LoginPage />);
-    expect(screen.getByTestId('google-signin')).toBeInTheDocument();
-    const iframe = screen
-      .getByTestId('google-signin')
-      .querySelector('iframe') as HTMLIFrameElement;
-    // skeleton stays until the GSI iframe finishes loading
-    expect(screen.getByTestId('google-signin-skeleton')).toBeInTheDocument();
-    act(() => {
-      fireEvent.load(iframe);
-    });
-    expect(screen.queryByTestId('google-signin-skeleton')).toBeNull();
+    const button = screen.getByTestId('google-signin');
+    expect(button).toHaveTextContent('Sign in with Google');
     expect(screen.queryByRole('heading')).toBeNull();
+    await userEvent.click(button);
+    await waitFor(() =>
+      expect(loginWithGoogle).toHaveBeenCalledWith('e2e:test@gmail.com'),
+    );
     expect(screen.getByRole('link', { name: 'Terms' })).toHaveAttribute(
       'href',
       '/terms',
@@ -67,17 +59,11 @@ describe('LoginPage', () => {
     ).toHaveAttribute('href', '/privacy');
   });
 
-  it('shows a skeleton until the Google script loads', () => {
-    delete (window as unknown as { google?: unknown }).google;
-    render(<LoginPage />);
-    expect(screen.getByTestId('google-signin-skeleton')).toBeInTheDocument();
-  });
-
-  it('exchanges the Google credential but waits for authed status to redirect', async () => {
+  it('exchanges the auth code but waits for authed status to redirect', async () => {
     loginWithGoogle.mockResolvedValue(undefined);
     const { rerender } = render(<LoginPage />);
     expect(capturedCallback).toBeTypeOf('function');
-    await act(async () => capturedCallback!({ credential: 'tok-123' }));
+    await act(async () => capturedCallback!({ code: 'tok-123' }));
     expect(loginWithGoogle).toHaveBeenCalledWith('tok-123');
     // Status is still 'anon' until the provider commits the session; no redirect yet.
     expect(replace).not.toHaveBeenCalled();
@@ -101,7 +87,7 @@ describe('LoginPage', () => {
     );
     render(<LoginPage />);
     await act(async () => {
-      capturedCallback!({ credential: 'tok-123' });
+      capturedCallback!({ code: 'tok-123' });
     });
     expect(screen.getByText(/signing in/i)).toBeInTheDocument();
     await act(async () => {
@@ -114,7 +100,7 @@ describe('LoginPage', () => {
       new ApiError(401, 'invalid google token'),
     );
     render(<LoginPage />);
-    await act(async () => capturedCallback!({ credential: 'bad' }));
+    await act(async () => capturedCallback!({ code: 'bad' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'invalid google token',
     );

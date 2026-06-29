@@ -8,7 +8,7 @@ type Status = 'loading' | 'authed' | 'anon';
 interface AuthValue {
   user: api.User | null;
   status: Status;
-  loginWithGoogle: (idToken: string) => Promise<void>;
+  loginWithGoogle: (code: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => api.setOnUnauthorized(null);
   }, []);
 
-  async function loginWithGoogle(idToken: string) {
-    await api.loginWithGoogle(idToken);
+  async function loginWithGoogle(code: string) {
+    await api.loginWithGoogle(code);
     setUser(await api.me());
     setStatus('authed');
   }
