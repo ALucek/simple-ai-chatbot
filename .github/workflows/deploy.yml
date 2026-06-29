@@ -6,21 +6,48 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  changes:
     # Deploy only when tests passed on a push to main (never on PR / fork runs).
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.diff.outputs.api }}
+      web: ${{ steps.diff.outputs.web }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      # main only takes squash-merged PRs, so each push is one commit — HEAD^ is the prior main tip.
+      - name: Detect changed services
+        id: diff
+        run: |
+          changed=$(git diff --name-only HEAD^ HEAD)
+          echo "$changed"
+          api=false
+          web=false
+          if grep -qE '^api/' <<<"$changed"; then api=true; fi
+          if grep -qE '^web/' <<<"$changed"; then web=true; fi
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: changes
+    if: needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write # WIF auth to GCP
     env:
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
       REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/chat
@@ -35,10 +62,12 @@ jobs:
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
       - run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
       - name: Build and push api
+        if: needs.changes.outputs.api == 'true'
         run: |
           docker build -t "$REGISTRY/api:$IMAGE_TAG" ./api
           docker push "$REGISTRY/api:$IMAGE_TAG"
       - name: Build and push web
+        if: needs.changes.outputs.web == 'true'
         run: |
           docker build \
             --build-arg NEXT_PUBLIC_API_URL="https://${{ vars.DOMAIN }}" \
@@ -46,15 +75,18 @@ jobs:
             -t "$REGISTRY/web:$IMAGE_TAG" ./web
           docker push "$REGISTRY/web:$IMAGE_TAG"
       - name: Run migrations
+        if: needs.changes.outputs.api == 'true'
         run: |
           gcloud run jobs update chat-migrate \
             --image "$REGISTRY/api:$IMAGE_TAG" --region "${{ vars.GCP_REGION }}"
           gcloud run jobs execute chat-migrate --region "${{ vars.GCP_REGION }}" --wait
       - name: Deploy api
+        if: needs.changes.outputs.api == 'true'
         run: |
           gcloud run services update chat-api \
             --image "$REGISTRY/api:$IMAGE_TAG" --region "${{ vars.GCP_REGION }}"
       - name: Deploy web
+        if: needs.changes.outputs.web == 'true'
         run: |
           gcloud run services update chat-web \
             --image "$REGISTRY/web:$IMAGE_TAG" --region "${{ vars.GCP_REGION }}"
