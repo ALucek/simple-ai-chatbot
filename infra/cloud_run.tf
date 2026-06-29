@@ -149,6 +149,15 @@ resource "google_cloud_run_v2_service" "api" {
           }
         }
       }
+      env {
+        name = "GOOGLE_CLIENT_SECRET"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.app["google-client-secret"].secret_id
+            version = "latest"
+          }
+        }
+      }
 
       startup_probe {
         http_get {
