@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Wordmark } from '@/components/wordmark';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const GSI_SRC = 'https://accounts.google.com/gsi/client';
 
@@ -35,6 +36,7 @@ export default function LoginPage() {
   const initialized = useRef(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (status === 'authed') router.replace('/');
@@ -64,7 +66,9 @@ export default function LoginPage() {
       window.google.accounts.id.renderButton(mount.current, {
         theme: 'outline',
         size: 'large',
+        width: 280,
       });
+      setReady(true);
     }
     if (window.google) {
       init();
@@ -87,7 +91,15 @@ export default function LoginPage() {
               Signing in…
             </p>
           )}
-          <div data-testid="google-signin" ref={mount} />
+          <div className="relative h-10 w-[280px]">
+            {!ready && (
+              <Skeleton
+                data-testid="google-signin-skeleton"
+                className="absolute inset-0 h-full w-full"
+              />
+            )}
+            <div data-testid="google-signin" ref={mount} />
+          </div>
           {error && (
             <p role="alert" className="text-danger text-sm">
               {error}
