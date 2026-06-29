@@ -23,6 +23,7 @@ resource "google_compute_region_network_endpoint_group" "web" {
 resource "google_compute_backend_service" "api" {
   name                  = "chat-api-backend"
   load_balancing_scheme = "EXTERNAL_MANAGED"
+  security_policy       = google_compute_security_policy.api.id
   backend {
     group = google_compute_region_network_endpoint_group.api.id
   }
