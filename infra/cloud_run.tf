@@ -118,11 +118,6 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       env {
-        name  = "TRUST_PROXY"
-        value = "true"
-      }
-
-      env {
         name = "DB_PASSWORD"
         value_source {
           secret_key_ref {
