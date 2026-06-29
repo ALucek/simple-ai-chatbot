@@ -27,6 +27,8 @@ jobs:
       - run: make web-install
       # Runs prettier check, eslint, tsc, vitest, and next build — same as `make web-check` locally.
       - run: make web-check
+      - run: make comment-check
+      - run: make comment-check-test
   e2e:
     runs-on: ubuntu-latest
     services:
