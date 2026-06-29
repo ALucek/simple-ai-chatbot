@@ -14,11 +14,7 @@ export function proxy(request: NextRequest) {
   requestHeaders.set('Content-Security-Policy', csp);
 
   const response = NextResponse.next({ request: { headers: requestHeaders } });
-  const header =
-    process.env.CSP_REPORT_ONLY === 'true'
-      ? 'Content-Security-Policy-Report-Only'
-      : 'Content-Security-Policy';
-  response.headers.set(header, csp);
+  response.headers.set('Content-Security-Policy', csp);
   response.headers.set(
     'Strict-Transport-Security',
     'max-age=31536000; includeSubDomains',
