@@ -41,7 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={toggle}
                 aria-label="Toggle sidebar"
                 aria-expanded={!collapsed}
-                className="absolute top-3.5 left-3 z-20 hidden h-8 w-8 items-center justify-center p-0 text-lg leading-none md:flex"
+                className="absolute top-3 left-3 z-20 hidden h-9 w-9 items-center justify-center p-0 text-lg leading-none md:flex"
               >
                 ☰
               </Button>
@@ -52,7 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 onClick={toggleMobile}
                 aria-label="Toggle menu"
                 aria-expanded={open}
-                className="border-border bg-surface absolute top-3.5 left-3 z-40 flex h-9 w-9 items-center justify-center border p-0 text-lg leading-none md:hidden"
+                className="border-border bg-surface absolute top-3 left-3 z-40 flex h-9 w-9 items-center justify-center border p-0 text-lg leading-none md:hidden"
               >
                 ☰
               </Button>
