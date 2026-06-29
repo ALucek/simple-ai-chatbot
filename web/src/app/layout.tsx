@@ -16,8 +16,19 @@ const mono = Share_Tech_Mono({
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://chat.lucek.ai'),
   title: 'Chat Łucek',
-  description: 'A minimal multi-user streaming chatbot.',
+  description: "Adam Łucek's fullstack multi-user LLM chatbot",
+  openGraph: {
+    title: 'Chat Łucek',
+    url: '/',
+    siteName: 'Chat Łucek',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Chat Łucek',
+  },
 };
 
 export const viewport: Viewport = {
