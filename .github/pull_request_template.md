@@ -1,8 +1,8 @@
 <!--
 Title format: type(scope): short imperative subject — e.g. "feat(api): raise daily token budget".
-  type:  feat | fix | chore | ci | build | docs | test | refactor | etc...
-  scope: the area touched, e.g. api, web, infra (optional — omit the parens if it spans many)
-  subject: lowercase, imperative, no trailing period
+  type:  feat | fix | chore | ci | build | docs | test | refactor | etc... (required)
+  scope: the area touched, e.g. api, web, infra (required)
+  subject: lowercase, imperative, no trailing period (required)
 -->
 
 ## Description
