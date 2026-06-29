@@ -1,6 +1,6 @@
 <!--
 Title format: type(scope): short imperative subject — e.g. "feat(api): raise daily token budget".
-  type:  feat | fix | chore | ci | build | docs | test | refactor
+  type:  feat | fix | chore | ci | build | docs | test | refactor | etc...
   scope: the area touched, e.g. api, web, infra (optional — omit the parens if it spans many)
   subject: lowercase, imperative, no trailing period
 -->
@@ -16,4 +16,5 @@ Title format: type(scope): short imperative subject — e.g. "feat(api): raise d
 
 ## Tests
 
-<!-- How this was verified — commands run and what passed. -->
+<!-- List how this was verified as checkbox items: `- [ ]` planned/not yet, `- [x]` done and passing. -->
+- [ ] 
