@@ -28,6 +28,7 @@
     "use-stick-to-bottom": "^1.1.6"
   },
   "devDependencies": {
+    "@ast-grep/cli": "0.44.0",
     "@playwright/test": "^1.61.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",

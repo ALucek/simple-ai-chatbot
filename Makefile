@@ -5,7 +5,7 @@ DB_DSN := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?
 .PHONY: db-up db-down db-psql migrate-up migrate-down migrate-status migrate-create db-delete db-reset docker-build stack-up stack-down\
         api-run api-fmt api-fmt-check api-lint api-typecheck api-test api-vuln api-sast \
         web-install web-run web-build web-fmt web-fmt-check web-lint web-typecheck web-test web-audit e2e e2e-local \
-        fmt lint typecheck test api-check web-check check \
+        fmt lint typecheck test api-check web-check check comment-check comment-check-test \
 		scan-secrets scan-secrets-staged scan-images security \
 		tf-fmt tf-fmt-check tf-validate tf-lint tf-config-scan tf-check \
         hooks health
@@ -150,18 +150,25 @@ stack-down:
 
 fmt: api-fmt web-fmt
 
-lint: api-fmt-check api-lint web-fmt-check web-lint
+lint: api-fmt-check api-lint web-fmt-check web-lint comment-check
 
 typecheck: api-typecheck web-typecheck
 
 test: api-test web-test
+
+# Comment style: <=80 chars + no multi-line block comments (ast-grep, all languages).
+comment-check:
+	@web/node_modules/.bin/ast-grep scan
+
+comment-check-test:
+	@web/node_modules/.bin/ast-grep test --skip-snapshot-tests
 
 # Per-service umbrella gates — what CI runs for each job (CI == local).
 api-check: api-fmt-check api-lint api-typecheck api-test
 web-check: web-fmt-check web-lint web-typecheck web-test web-build
 
 # Full local gate: everything that must pass before merge.
-check: api-check web-check tf-check e2e-local
+check: api-check web-check tf-check comment-check comment-check-test e2e-local
 
 # ── Dev tooling ────────────────────────────────────────────────────────
 

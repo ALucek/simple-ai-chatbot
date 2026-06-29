@@ -1,3 +1,4 @@
 allowBuilds:
+  '@ast-grep/cli': false
   sharp: true
   unrs-resolver: true

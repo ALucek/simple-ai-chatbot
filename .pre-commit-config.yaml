@@ -27,6 +27,12 @@ repos:
         language: system
         files: ^web/
         pass_filenames: false
+      - id: comment-check
+        name: comment style (ast-grep)
+        entry: make comment-check
+        language: system
+        files: \.(go|ts|tsx|js|jsx|mjs|cjs|css)$
+        pass_filenames: false
       - id: api-test
         name: Go tests
         entry: make api-test
