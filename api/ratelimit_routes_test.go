@@ -14,7 +14,7 @@ func TestRateLimit_CredentialsPerIP(t *testing.T) {
 	var last int
 	for i := 0; i < authRateBurst+1; i++ {
 		rec := do(t, mux, http.MethodPost, "/api/google", "",
-			map[string]string{"id_token": "nope"})
+			map[string]string{"code": "nope"})
 		last = rec.Code
 	}
 	if last != http.StatusTooManyRequests {

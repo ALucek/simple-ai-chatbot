@@ -2,14 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/api/idtoken"
 )
+
+// googleTokenURL is Google's OAuth2 token endpoint; overridable in tests.
+var googleTokenURL = "https://oauth2.googleapis.com/token"
 
 // googleClaims is the subset of a verified Google ID token we use.
 type googleClaims struct {
@@ -59,19 +65,77 @@ func selectGoogleVerifier(cfg Config) googleVerifier {
 	return realGoogleVerifier(cfg.GoogleClientID)
 }
 
-// Google verifies a Google ID token, upserts the user, and issues a session.
+// googleExchanger trades a one-time auth code for a Google ID token.
+type googleExchanger func(ctx context.Context, code string) (idToken string, err error)
+
+// realGoogleExchanger exchanges the popup auth code at Google's token endpoint.
+func realGoogleExchanger(clientID, clientSecret string) googleExchanger {
+	return func(ctx context.Context, code string) (string, error) {
+		form := url.Values{
+			"code":          {code},
+			"client_id":     {clientID},
+			"client_secret": {clientSecret},
+			"redirect_uri":  {"postmessage"},
+			"grant_type":    {"authorization_code"},
+		}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+			googleTokenURL, strings.NewReader(form.Encode()))
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return "", fmt.Errorf("token exchange failed: %s", resp.Status)
+		}
+		var out struct {
+			IDToken string `json:"id_token"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			return "", err
+		}
+		if out.IDToken == "" {
+			return "", errors.New("token exchange: no id_token in response")
+		}
+		return out.IDToken, nil
+	}
+}
+
+// fakeGoogleExchanger passes the code through as the id token. Test-only.
+func fakeGoogleExchanger() googleExchanger {
+	return func(_ context.Context, code string) (string, error) { return code, nil }
+}
+
+// selectGoogleExchanger returns the fake exchanger when GOOGLE_AUTH_FAKE is set, else the real one.
+func selectGoogleExchanger(cfg Config) googleExchanger {
+	if cfg.GoogleAuthFake {
+		return fakeGoogleExchanger()
+	}
+	return realGoogleExchanger(cfg.GoogleClientID, cfg.GoogleClientSecret)
+}
+
+// Google exchanges an auth code, verifies the id token, upserts the user, and issues a session.
 func (a *Auth) Google(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		IDToken string `json:"id_token"`
+		Code string `json:"code"`
 	}
 	if !decodeJSON(w, r, &body) {
 		return
 	}
-	if body.IDToken == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "id_token required"})
+	if body.Code == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "code required"})
 		return
 	}
-	claims, err := a.verify(r.Context(), body.IDToken)
+	idToken, err := a.exchange(r.Context(), body.Code)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid google token"})
+		return
+	}
+	claims, err := a.verify(r.Context(), idToken)
 	if err != nil || !claims.EmailVerified || claims.Email == "" {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid google token"})
 		return

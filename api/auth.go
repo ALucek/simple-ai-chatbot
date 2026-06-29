@@ -20,6 +20,7 @@ type Auth struct {
 	pool       *pgxpool.Pool
 	secret     []byte
 	verify     googleVerifier
+	exchange   googleExchanger
 	signupOpen bool
 }
 

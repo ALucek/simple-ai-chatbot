@@ -54,7 +54,7 @@ func main() {
 
 	check := func(ctx context.Context) error { return Healthy(ctx, pool) }
 
-	auth := &Auth{pool: pool, secret: []byte(cfg.JWTSecret), verify: selectGoogleVerifier(cfg), signupOpen: cfg.SignupOpen}
+	auth := &Auth{pool: pool, secret: []byte(cfg.JWTSecret), verify: selectGoogleVerifier(cfg), exchange: selectGoogleExchanger(cfg), signupOpen: cfg.SignupOpen}
 	llm := &openRouterClient{key: cfg.OpenRouterKey, model: cfg.Model, baseURL: cfg.OpenRouterBaseURL, http: newLLMHTTPClient()}
 	chat := &Chat{pool: pool, llm: llm, systemPrompt: cfg.SystemPrompt, tokenBudget: cfg.TokenBudgetDaily, ownerEmail: normalizeEmail(cfg.OwnerEmail)}
 

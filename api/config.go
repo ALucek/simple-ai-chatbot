@@ -8,51 +8,53 @@ import (
 
 // Config holds everything the app needs to run, read once from the environment.
 type Config struct {
-	DBHost            string
-	DBPort            string
-	DBUser            string
-	DBPassword        string
-	DBName            string
-	Port              string
-	JWTSecret         string
-	OpenRouterKey     string
-	Model             string
-	SystemPrompt      string
-	AllowedOrigin     string
-	OpenRouterBaseURL string
-	DatabaseURL       string
-	LogLevel          string
-	TokenBudgetDaily  int
-	GoogleClientID    string
-	OwnerEmail        string
-	GoogleAuthFake    bool
-	SignupOpen        bool
-	TrustProxy        bool
+	DBHost             string
+	DBPort             string
+	DBUser             string
+	DBPassword         string
+	DBName             string
+	Port               string
+	JWTSecret          string
+	OpenRouterKey      string
+	Model              string
+	SystemPrompt       string
+	AllowedOrigin      string
+	OpenRouterBaseURL  string
+	DatabaseURL        string
+	LogLevel           string
+	TokenBudgetDaily   int
+	GoogleClientID     string
+	GoogleClientSecret string
+	OwnerEmail         string
+	GoogleAuthFake     bool
+	SignupOpen         bool
+	TrustProxy         bool
 }
 
 // LoadConfig reads the required settings from the environment.
 func LoadConfig() (Config, error) {
 	cfg := Config{
-		DBHost:            os.Getenv("DB_HOST"),
-		DBPort:            os.Getenv("DB_PORT"),
-		DBUser:            os.Getenv("DB_USER"),
-		DBPassword:        os.Getenv("DB_PASSWORD"),
-		DBName:            os.Getenv("DB_NAME"),
-		Port:              os.Getenv("PORT"),
-		JWTSecret:         os.Getenv("JWT_SECRET"),
-		OpenRouterKey:     os.Getenv("OPENROUTER_API_KEY"),
-		Model:             getenvDefault("OPENROUTER_MODEL", "openrouter/free"),
-		SystemPrompt:      getenvDefault("SYSTEM_PROMPT", "You are a helpful assistant."),
-		AllowedOrigin:     getenvDefault("ALLOWED_ORIGIN", "http://localhost:3000"),
-		OpenRouterBaseURL: getenvDefault("OPENROUTER_BASE_URL", openRouterURL),
-		LogLevel:          getenvDefault("LOG_LEVEL", "info"),
-		DatabaseURL:       os.Getenv("DATABASE_URL"),
-		TokenBudgetDaily:  getenvInt("TOKEN_BUDGET_DAILY", 8192),
-		GoogleClientID:    os.Getenv("GOOGLE_CLIENT_ID"),
-		OwnerEmail:        os.Getenv("OWNER_EMAIL"),
-		GoogleAuthFake:    os.Getenv("GOOGLE_AUTH_FAKE") == "1",
-		SignupOpen:        os.Getenv("SIGNUP_OPEN") != "false",
-		TrustProxy:        os.Getenv("TRUST_PROXY") == "true",
+		DBHost:             os.Getenv("DB_HOST"),
+		DBPort:             os.Getenv("DB_PORT"),
+		DBUser:             os.Getenv("DB_USER"),
+		DBPassword:         os.Getenv("DB_PASSWORD"),
+		DBName:             os.Getenv("DB_NAME"),
+		Port:               os.Getenv("PORT"),
+		JWTSecret:          os.Getenv("JWT_SECRET"),
+		OpenRouterKey:      os.Getenv("OPENROUTER_API_KEY"),
+		Model:              getenvDefault("OPENROUTER_MODEL", "openrouter/free"),
+		SystemPrompt:       getenvDefault("SYSTEM_PROMPT", "You are a helpful assistant."),
+		AllowedOrigin:      getenvDefault("ALLOWED_ORIGIN", "http://localhost:3000"),
+		OpenRouterBaseURL:  getenvDefault("OPENROUTER_BASE_URL", openRouterURL),
+		LogLevel:           getenvDefault("LOG_LEVEL", "info"),
+		DatabaseURL:        os.Getenv("DATABASE_URL"),
+		TokenBudgetDaily:   getenvInt("TOKEN_BUDGET_DAILY", 8192),
+		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		OwnerEmail:         os.Getenv("OWNER_EMAIL"),
+		GoogleAuthFake:     os.Getenv("GOOGLE_AUTH_FAKE") == "1",
+		SignupOpen:         os.Getenv("SIGNUP_OPEN") != "false",
+		TrustProxy:         os.Getenv("TRUST_PROXY") == "true",
 	}
 
 	required := []struct{ name, value string }{

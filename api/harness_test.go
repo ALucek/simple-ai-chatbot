@@ -81,7 +81,7 @@ func newTestMux(client *openRouterClient) http.Handler {
 
 // newTestMuxBudget builds the router with an explicit daily token budget.
 func newTestMuxBudget(client *openRouterClient, budget int) http.Handler {
-	auth := &Auth{pool: testPool, secret: testSecret, verify: fakeGoogleVerifier(), signupOpen: true}
+	auth := &Auth{pool: testPool, secret: testSecret, verify: fakeGoogleVerifier(), exchange: fakeGoogleExchanger(), signupOpen: true}
 	chat := &Chat{pool: testPool, llm: client, systemPrompt: testSystemPrompt, tokenBudget: budget}
 	check := func(ctx context.Context) error { return Healthy(ctx, testPool) }
 	return newMux(check, auth, chat, false)

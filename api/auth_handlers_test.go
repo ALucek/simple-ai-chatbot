@@ -13,7 +13,7 @@ import (
 func googleLogin(t *testing.T, mux http.Handler, email string) string {
 	t.Helper()
 	return refreshCookieOf(t, do(t, mux, http.MethodPost, "/api/google", "",
-		map[string]string{"id_token": "e2e:" + email}))
+		map[string]string{"code": "e2e:" + email}))
 }
 
 // refreshCookieOf returns the refresh_token value from a response's Set-Cookie.
@@ -73,7 +73,7 @@ func TestRefresh_IssuedAsHttpOnlyCookie(t *testing.T) {
 	resetDB(t)
 	mux := newTestMux(nil)
 	rec := do(t, mux, http.MethodPost, "/api/google", "",
-		map[string]string{"id_token": "e2e:cookie@x.com"})
+		map[string]string{"code": "e2e:cookie@x.com"})
 
 	var c *http.Cookie
 	for _, ck := range rec.Result().Cookies() {
