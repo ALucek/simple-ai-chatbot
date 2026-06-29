@@ -113,6 +113,10 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.owner_email
       }
       env {
+        name  = "SIGNUP_OPEN"
+        value = "true"
+      }
+      env {
         name  = "ALLOWED_ORIGIN"
         value = "https://${var.domain}"
       }
