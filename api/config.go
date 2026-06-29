@@ -52,7 +52,7 @@ func LoadConfig() (Config, error) {
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		OwnerEmail:         os.Getenv("OWNER_EMAIL"),
 		GoogleAuthFake:     os.Getenv("GOOGLE_AUTH_FAKE") == "1",
-		SignupOpen:         os.Getenv("SIGNUP_OPEN") != "false",
+		SignupOpen:         os.Getenv("SIGNUP_OPEN") == "true",
 	}
 
 	required := []struct{ name, value string }{
@@ -70,6 +70,11 @@ func LoadConfig() (Config, error) {
 		if r.value == "" {
 			return Config{}, fmt.Errorf("missing required env var: %s", r.name)
 		}
+	}
+
+	// The real Google exchanger needs the client secret; fake auth doesn't.
+	if !cfg.GoogleAuthFake && cfg.GoogleClientSecret == "" {
+		return Config{}, fmt.Errorf("missing required env var: GOOGLE_CLIENT_SECRET")
 	}
 
 	// A too-short JWT_SECRET makes session tokens forgeable.
