@@ -4,7 +4,7 @@ resource "google_sql_database_instance" "chat" {
   name                = "chat"
   database_version    = "POSTGRES_16"
   region              = var.region
-  deletion_protection = false
+  deletion_protection = true
 
   settings {
     tier                        = var.db_tier
@@ -12,10 +12,17 @@ resource "google_sql_database_instance" "chat" {
     availability_type           = "ZONAL"
     disk_autoresize             = true
     disk_size                   = 10
-    deletion_protection_enabled = false
+    deletion_protection_enabled = true
 
     backup_configuration {
-      enabled = true
+      enabled                        = true
+      point_in_time_recovery_enabled = true
+      transaction_log_retention_days = 7
+
+      backup_retention_settings {
+        retained_backups = 7
+        retention_unit   = "COUNT"
+      }
     }
 
     ip_configuration {
