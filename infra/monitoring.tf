@@ -264,3 +264,36 @@ resource "google_monitoring_alert_policy" "openrouter_errors" {
 
   notification_channels = [google_monitoring_notification_channel.email.id]
 }
+
+# Spike in 429s at the LB: Cloud Armor edge denies + app rate limits.
+resource "google_monitoring_alert_policy" "lb_429" {
+  display_name = "LB 429 spike (rate-limited)"
+  combiner     = "OR"
+
+  conditions {
+    display_name = "429s > 30 / 5m"
+    condition_threshold {
+      filter = join(" AND ", [
+        "resource.type = \"https_lb_rule\"",
+        "resource.labels.url_map_name = \"chat-url-map\"",
+        "metric.type = \"loadbalancing.googleapis.com/https/request_count\"",
+        "metric.labels.response_code = \"429\"",
+      ])
+      comparison      = "COMPARISON_GT"
+      threshold_value = 30
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+
+      trigger {
+        count = 1
+      }
+    }
+  }
+
+  notification_channels = [google_monitoring_notification_channel.email.id]
+}
