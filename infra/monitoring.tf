@@ -99,16 +99,14 @@ resource "google_monitoring_alert_policy" "api_5xx" {
   notification_channels = [google_monitoring_notification_channel.email.id]
 }
 
-# Per-request latency distribution, excluding the SSE stream and probes.
+# Per-request latency distribution, excluding the SSE stream route.
 resource "google_logging_metric" "api_latency" {
   name = "chat_api_request_latency"
   filter = join(" ", [
     "resource.type=\"cloud_run_revision\"",
     "resource.labels.service_name=\"chat-api\"",
     "jsonPayload.msg=\"request\"",
-    "jsonPayload.path!=\"/api/chat\"",
-    "jsonPayload.path!=\"/readyz\"",
-    "jsonPayload.path!=\"/livez\"",
+    "jsonPayload.route!=\"POST /api/conversations/{id}/messages\"",
   ])
 
   metric_descriptor {
