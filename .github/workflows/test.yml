@@ -54,6 +54,7 @@ jobs:
       OPENROUTER_API_KEY: test-key
       GOOGLE_CLIENT_ID: e2e-dummy
       GOOGLE_AUTH_FAKE: '1'
+      SIGNUP_OPEN: 'true'
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: e2e-dummy
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4

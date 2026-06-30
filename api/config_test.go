@@ -12,6 +12,7 @@ func setAllEnv(t *testing.T) {
 	t.Setenv("JWT_SECRET", "test-secret-at-least-32-bytes-long-xx")
 	t.Setenv("OPENROUTER_API_KEY", "test-openrouter-key")
 	t.Setenv("GOOGLE_CLIENT_ID", "test-client-id")
+	t.Setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
 	// Clear optional vars so a developer's .env can't leak into default assertions.
 	for _, k := range []string{
 		"OPENROUTER_MODEL", "SYSTEM_PROMPT", "ALLOWED_ORIGIN", "OPENROUTER_BASE_URL",
@@ -99,6 +100,64 @@ func TestLoadConfig_RequiresGoogleClientID(t *testing.T) {
 	t.Setenv("GOOGLE_CLIENT_ID", "")
 	if _, err := LoadConfig(); err == nil {
 		t.Fatal("expected an error for missing GOOGLE_CLIENT_ID, got nil")
+	}
+}
+
+func TestLoadConfig_RequiresGoogleClientSecret(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_CLIENT_SECRET", "")
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("expected an error for missing GOOGLE_CLIENT_SECRET, got nil")
+	}
+}
+
+func TestLoadConfig_FakeAuthSkipsClientSecret(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_CLIENT_SECRET", "")
+	t.Setenv("GOOGLE_AUTH_FAKE", "1")
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("fake auth should not require the secret, got %v", err)
+	}
+}
+
+func TestLoadConfig_SignupsClosedByDefault(t *testing.T) {
+	setAllEnv(t)
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cfg.SignupOpen {
+		t.Fatal("signups should be closed by default")
+	}
+}
+
+func TestLoadConfig_SignupsOpenWhenSet(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("SIGNUP_OPEN", "true")
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !cfg.SignupOpen {
+		t.Fatal("signups should be open when SIGNUP_OPEN=true")
+	}
+}
+
+func TestLoadConfig_FakeAuthRejectedUnderTLS(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_AUTH_FAKE", "1")
+	t.Setenv("ALLOWED_ORIGIN", "https://chat.lucek.ai")
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("expected an error for fake auth under https, got nil")
+	}
+}
+
+func TestLoadConfig_FakeAuthAllowedLocally(t *testing.T) {
+	setAllEnv(t)
+	t.Setenv("GOOGLE_AUTH_FAKE", "1")
+	t.Setenv("ALLOWED_ORIGIN", "http://localhost:3000")
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("fake auth under http should be allowed, got %v", err)
 	}
 }
 
