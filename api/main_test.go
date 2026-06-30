@@ -48,6 +48,7 @@ func TestSecurityHeaders(t *testing.T) {
 		"Referrer-Policy":           "no-referrer",
 		"Content-Security-Policy":   "default-src 'none'; frame-ancestors 'none'",
 		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+		"Permissions-Policy":        "camera=(), microphone=(), geolocation=()",
 	}
 	for k, v := range want {
 		if got := rec.Header().Get(k); got != v {
