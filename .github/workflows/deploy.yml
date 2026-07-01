@@ -48,6 +48,7 @@ jobs:
     permissions:
       contents: read
       id-token: write # WIF auth to GCP
+      attestations: write # sign build provenance + SBOM
     env:
       IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
       REGISTRY: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/chat
@@ -62,11 +63,15 @@ jobs:
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
       - run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
       - name: Build and push api
+        id: build_api
         if: needs.changes.outputs.api == 'true'
         run: |
           docker build -t "$REGISTRY/api:$IMAGE_TAG" ./api
           docker push "$REGISTRY/api:$IMAGE_TAG"
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$REGISTRY/api:$IMAGE_TAG" | cut -d@ -f2)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - name: Build and push web
+        id: build_web
         if: needs.changes.outputs.web == 'true'
         run: |
           docker build \
@@ -74,6 +79,8 @@ jobs:
             --build-arg NEXT_PUBLIC_GOOGLE_CLIENT_ID="${{ vars.GOOGLE_CLIENT_ID }}" \
             -t "$REGISTRY/web:$IMAGE_TAG" ./web
           docker push "$REGISTRY/web:$IMAGE_TAG"
+          digest=$(docker inspect --format='{{index .RepoDigests 0}}' "$REGISTRY/web:$IMAGE_TAG" | cut -d@ -f2)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - name: Run migrations
         if: needs.changes.outputs.api == 'true'
         run: |
@@ -97,3 +104,49 @@ jobs:
           test "$web" = "200" || { echo "web returned $web"; exit 1; }
           api=$(curl -s -o /dev/null -w '%{http_code}' "https://${{ vars.DOMAIN }}/api/me")
           test "$api" = "401" || { echo "api /api/me returned $api"; exit 1; }
+
+      # Supply-chain artifacts run after deploy so an attestation hiccup never
+      # blocks a live release. Both are verifiable with `gh attestation verify`.
+      - name: Generate api SBOM
+        if: needs.changes.outputs.api == 'true'
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ env.REGISTRY }}/api:${{ env.IMAGE_TAG }}
+          format: spdx-json
+          output-file: api.sbom.spdx.json
+          artifact-name: api-sbom.spdx.json
+      - name: Attest api provenance
+        if: needs.changes.outputs.api == 'true'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ env.REGISTRY }}/api
+          subject-digest: ${{ steps.build_api.outputs.digest }}
+      - name: Attest api SBOM
+        if: needs.changes.outputs.api == 'true'
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ${{ env.REGISTRY }}/api
+          subject-digest: ${{ steps.build_api.outputs.digest }}
+          sbom-path: api.sbom.spdx.json
+
+      - name: Generate web SBOM
+        if: needs.changes.outputs.web == 'true'
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          image: ${{ env.REGISTRY }}/web:${{ env.IMAGE_TAG }}
+          format: spdx-json
+          output-file: web.sbom.spdx.json
+          artifact-name: web-sbom.spdx.json
+      - name: Attest web provenance
+        if: needs.changes.outputs.web == 'true'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ${{ env.REGISTRY }}/web
+          subject-digest: ${{ steps.build_web.outputs.digest }}
+      - name: Attest web SBOM
+        if: needs.changes.outputs.web == 'true'
+        uses: actions/attest-sbom@4651f806c01d8637787e274ac3bdf724ef169f34 # v3
+        with:
+          subject-name: ${{ env.REGISTRY }}/web
+          subject-digest: ${{ steps.build_web.outputs.digest }}
+          sbom-path: web.sbom.spdx.json
